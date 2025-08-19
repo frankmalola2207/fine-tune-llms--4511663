@@ -120,15 +120,30 @@ backend:
 frontend:
   - task: "ID Capture via Laptop Camera"
     implemented: true
-    working: false
+    working: true
     file: "/app/frontend/src/App.js"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: true
     status_history:
         - working: false
           agent: "main"
           comment: "Frontend error: TypeError: bioMetricsApi.testIDScan is not a function - Missing test function for ID scanning functionality"
+        - working: true
+          agent: "main"
+          comment: "FIXED: Added bioMetricsApi global object with testIDScan function. Enhanced laptop camera support with better error handling, image processing, and device-specific configurations."
+
+  - task: "Enhanced Laptop Camera Support"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Implemented enhanced camera configuration for laptop cameras, improved image capture with contrast/brightness adjustment, extended capture time for better positioning, and comprehensive error handling with fallback options."
 
 metadata:
   created_by: "main_agent"
