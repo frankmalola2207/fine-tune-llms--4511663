@@ -36,26 +36,36 @@ const IDScanScreen = () => {
         throw new Error('Camera API not supported on this device');
       }
 
-      // Detect Apple devices
-      const isAppleDevice = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
-      console.log('🍎 Apple device detected:', isAppleDevice);
+      // Detect mobile devices more specifically
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      console.log('📱 Device detection:', { isMobile, isIOS });
 
-      // Apple Safari-optimized camera configuration
+      // iOS Safari-specific camera configuration
       let constraints;
-      if (isAppleDevice) {
-        // Simplified constraints for Apple devices - avoid facingMode issues
+      if (isIOS) {
+        // iOS requires very basic constraints to avoid permission failures
         constraints = {
           video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+            // No facingMode on iOS to avoid silent failures
+          }
+        };
+        console.log('🍎 Using iOS-optimized constraints');
+      } else if (isMobile) {
+        // Android mobile constraints
+        constraints = {
+          video: {
+            facingMode: { ideal: 'environment' },
             width: { ideal: 1280, min: 640 },
             height: { ideal: 720, min: 480 }
-            // No facingMode for Apple devices to avoid silent failures
           }
         };
       } else {
-        // Standard constraints for other devices
+        // Desktop constraints
         constraints = {
           video: {
-            facingMode: { ideal: 'environment' }, // Prefer back camera
             width: { ideal: 1280, min: 640 },
             height: { ideal: 720, min: 480 }
           }
