@@ -581,18 +581,12 @@ function App() {
                   <span>Mobile Biometric Verification Progress</span>
                 </CardTitle>
                 <CardDescription>
-                  Advanced contactless biometric capture using smartphone technology
+                  ID OCR verification is mandatory • Biometric captures are configurable
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between mb-4">
-                  {[
-                    { step: 1, label: "Personal Info", icon: Users },
-                    { step: 2, label: "Mobile Biometrics", icon: Smartphone },
-                    { step: 3, label: "Document Scan", icon: FileText },
-                    { step: 4, label: "NFC Verification", icon: Nfc },
-                    { step: 5, label: "Complete", icon: Award }
-                  ].map(({ step, label, icon: Icon }) => (
+                  {getStepConfig().map(({ step, label, icon: Icon }) => (
                     <div key={step} className="flex flex-col items-center space-y-2">
                       <div className={`p-3 rounded-full border-2 transition-all duration-300 ${
                         getStepStatus(step) === "completed" 
@@ -603,15 +597,45 @@ function App() {
                       }`}>
                         <Icon className="w-5 h-5" />
                       </div>
-                      <span className={`text-sm font-medium ${
+                      <span className={`text-sm font-medium text-center ${
                         getStepStatus(step) === "active" ? "text-blue-600" : "text-gray-600"
                       }`}>
                         {label}
                       </span>
+                      {label.includes("Required") && (
+                        <Badge className="bg-red-100 text-red-800 text-xs">
+                          Mandatory
+                        </Badge>
+                      )}
+                      {label.includes("Optional") && (
+                        <Badge className="bg-blue-100 text-blue-800 text-xs">
+                          Optional
+                        </Badge>
+                      )}
                     </div>
                   ))}
                 </div>
-                <Progress value={(activeStep - 1) * 25} className="h-2" />
+                <Progress value={((activeStep - 1) / (getStepConfig().length - 1)) * 100} className="h-2" />
+                
+                {/* Configuration Status */}
+                {biometricConfig && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2">
+                        <Target className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium">Configuration Status:</span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Badge className="bg-red-100 text-red-800">
+                          {biometricConfig.mandatory_features?.length || 0} Mandatory
+                        </Badge>
+                        <Badge className="bg-blue-100 text-blue-800">
+                          {biometricConfig.optional_features?.length || 0} Optional
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
