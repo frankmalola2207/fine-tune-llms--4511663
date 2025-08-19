@@ -60,8 +60,6 @@ const IDScanScreen = () => {
       }
       
       if (videoRef.current) {
-        // Set crossOrigin to allow canvas operations
-        videoRef.current.crossOrigin = "anonymous";
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         
