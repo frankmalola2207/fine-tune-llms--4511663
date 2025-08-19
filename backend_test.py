@@ -714,7 +714,7 @@ class MobileTechnologiesAPITester:
         
         # Final Results
         print("\n" + "="*80)
-        print("📊 MOBILE-TECHNOLOGIES ENHANCED WORKFLOW TEST RESULTS")
+        print("📊 MOBILE-TECHNOLOGIES ENHANCED WORKFLOW TEST RESULTS WITH LAPTOP CAMERA")
         print("="*80)
         
         workflow_steps = [
@@ -727,11 +727,14 @@ class MobileTechnologiesAPITester:
             ("Workflow Validation - Incomplete", workflow_incomplete_success),
             ("Mobile Dashboard", dashboard_success), 
             ("Enhanced KYC Initiation", kyc_success),
+            ("Laptop Camera Test Endpoint", laptop_test_success),
+            ("Enhanced Passport Scan - Laptop Camera", laptop_passport_success),
             ("Mobile Fingerprint Capture", fingerprint_success),
             ("Facial Liveness Detection", liveness_success),
             ("Enhanced Passport OCR with Personal Info", passport_success),
             ("Personal Information Verification", personal_info_success),
-            ("NFC Chip Reading", nfc_success)
+            ("NFC Chip Reading", nfc_success),
+            ("Dashboard Laptop Tracking", dashboard_laptop_success)
         ]
         
         for step_name, step_success in workflow_steps:
@@ -748,7 +751,9 @@ class MobileTechnologiesAPITester:
             ("Configuration API", config_success),
             ("Workflow Validation API", workflow_validation_success),
             ("Enhanced Backend API", version_success),
-            ("Mobile Biometric Endpoints", mobile_biometric_success)
+            ("Laptop Camera Functionality", laptop_camera_success),
+            ("Mobile Biometric Endpoints", mobile_biometric_success),
+            ("Dashboard Laptop Tracking", dashboard_laptop_success)
         ]
         
         print(f"\n🎯 PRIORITY TEST RESULTS:")
@@ -772,9 +777,15 @@ class MobileTechnologiesAPITester:
             print("   ✓ Auto-fill data generation working")
             print("   ✓ ID-first workflow with personal info extraction operational")
             print("   ✓ NFC chip reading simulation working")
+            print("   ✓ LAPTOP CAMERA ID CAPTURE FUNCTIONALITY WORKING")
+            print("   ✓ Laptop camera test endpoint operational")
+            print("   ✓ Enhanced passport scan with laptop camera device info working")
+            print("   ✓ Processing options for laptop cameras functional")
+            print("   ✓ Device-specific AI analysis for laptop cameras working")
+            print("   ✓ Dashboard tracks laptop passport scans separately")
         else:
             print("\n⚠️  Some tests failed. Check the detailed logs above.")
-            print("   Issues found in enhanced configuration or workflow validation.")
+            print("   Issues found in enhanced configuration, workflow validation, or laptop camera functionality.")
             
         return overall_success
 
