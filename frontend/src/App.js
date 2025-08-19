@@ -1136,8 +1136,132 @@ function App() {
             )}
           </TabsContent>
 
-          {/* Analytics Dashboard */}
-          <TabsContent value="dashboard">
+          <TabsContent value="config" className="space-y-6">
+            <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Target className="w-5 h-5" />
+                  <span>Biometric Feature Configuration</span>
+                </CardTitle>
+                <CardDescription>
+                  Configure which biometric features are mandatory or optional
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {biometricConfig ? (
+                  <div className="space-y-6">
+                    {/* Current Configuration Display */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-semibold mb-3 text-red-800 flex items-center">
+                          <AlertTriangle className="w-4 h-4 mr-2" />
+                          Mandatory Features
+                        </h4>
+                        <div className="space-y-2">
+                          {Object.entries(biometricConfig.config || {})
+                            .filter(([_, config]) => config.mandatory)
+                            .map(([feature, config]) => (
+                            <div key={feature} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                              <div>
+                                <div className="font-medium capitalize">{feature.replace('_', ' ')}</div>
+                                <div className="text-sm text-gray-600">{config.description}</div>
+                              </div>
+                              <Badge className="bg-red-100 text-red-800">
+                                Required
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold mb-3 text-blue-800 flex items-center">
+                          <Activity className="w-4 h-4 mr-2" />
+                          Optional Features
+                        </h4>
+                        <div className="space-y-2">
+                          {Object.entries(biometricConfig.config || {})
+                            .filter(([_, config]) => config.enabled && !config.mandatory)
+                            .map(([feature, config]) => (
+                            <div key={feature} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                              <div>
+                                <div className="font-medium capitalize">{feature.replace('_', ' ')}</div>
+                                <div className="text-sm text-gray-600">{config.description}</div>
+                              </div>
+                              <Badge className="bg-blue-100 text-blue-800">
+                                Optional
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Configuration Rules */}
+                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                      <h4 className="font-semibold mb-2 text-yellow-800 flex items-center">
+                        <Shield className="w-4 h-4 mr-2" />
+                        Configuration Rules
+                      </h4>
+                      <ul className="text-sm text-yellow-700 space-y-1">
+                        <li>• <strong>ID OCR (Passport/Document)</strong> is always mandatory for regulatory compliance</li>
+                        <li>• <strong>Contactless Fingerprint</strong> and <strong>Facial Liveness</strong> can be configured as optional</li>
+                        <li>• At least one biometric verification method must be enabled</li>
+                        <li>• Changes require system administrator privileges</li>
+                      </ul>
+                    </div>
+
+                    {/* Configuration Statistics */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <Card className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-red-600">
+                            {biometricConfig.mandatory_features?.length || 0}
+                          </div>
+                          <div className="text-sm text-gray-600">Mandatory</div>
+                        </div>
+                      </Card>
+                      <Card className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {biometricConfig.optional_features?.length || 0}
+                          </div>
+                          <div className="text-sm text-gray-600">Optional</div>
+                        </div>
+                      </Card>
+                      <Card className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {Object.values(biometricConfig.config || {}).filter(c => c.enabled).length}
+                          </div>
+                          <div className="text-sm text-gray-600">Total Enabled</div>
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* Refresh Configuration */}
+                    <div className="flex justify-center">
+                      <Button
+                        onClick={fetchBiometricConfig}
+                        disabled={loading}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                      >
+                        {loading ? "Refreshing..." : "Refresh Configuration"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Target className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                    <p className="text-gray-600 mb-4">Loading biometric configuration...</p>
+                    <Button onClick={fetchBiometricConfig} disabled={loading}>
+                      Load Configuration
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
             {dashboard && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="bg-white/70 backdrop-blur-sm border-white/20">
