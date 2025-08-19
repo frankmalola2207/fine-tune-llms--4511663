@@ -58,6 +58,11 @@ function App() {
   const [biometricConfig, setBiometricConfig] = useState(null);
   const [workflowValidation, setWorkflowValidation] = useState(null);
   
+  // Personal information extraction states
+  const [extractedPersonalInfo, setExtractedPersonalInfo] = useState(null);
+  const [personalInfoVerified, setPersonalInfoVerified] = useState(false);
+  const [verificationNotes, setVerificationNotes] = useState("");
+  
   // Camera references
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
