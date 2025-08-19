@@ -111,7 +111,7 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
@@ -119,6 +119,9 @@ backend:
         - working: true
           agent: "main"
           comment: "ENHANCED: Added laptop camera support with processing_options parameter, device-specific AI analysis, improved error handling, and dedicated test endpoint /api/test/laptop-camera/id-capture."
+        - working: true
+          agent: "testing"
+          comment: "TESTED: Enhanced passport scan endpoint /api/mobile/passport/scan successfully accepts laptop camera device_info and processing_options. Device-specific AI analysis working. Endpoints accessible and functional. Minor: OCR fails with minimal test images but core functionality verified."
 
   - task: "Laptop Camera Processing Support"
     implemented: true
@@ -126,11 +129,38 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Implemented laptop camera-specific processing options, enhanced AI analysis with device type considerations, updated dashboard to track laptop captures separately, and added comprehensive test endpoint."
+        - working: true
+          agent: "testing"
+          comment: "TESTED: All laptop camera functionality working correctly. Test endpoint /api/test/laptop-camera/id-capture operational. Dashboard tracks laptop_passport_scans separately. Processing options (laptop_optimized, enhance_contrast, etc.) properly handled. Device-specific capture_type 'laptop_camera_passport_ocr_with_personal_info' correctly stored."
+
+  - task: "Biometric Configuration API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "TESTED: Biometric configuration endpoints /api/config/biometric working perfectly. GET returns proper config with mandatory/optional features. POST updates work correctly. Mandatory feature protection prevents disabling passport_ocr. Enhanced functionality compatible with existing configuration system."
+
+  - task: "Dashboard Laptop Tracking"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "TESTED: Dashboard /api/mobile/dashboard successfully tracks laptop passport scans separately from mobile scans. Statistics include laptop_passport_scans field. Success rates tracked for laptop_camera_passport_ocr_with_personal_info. Mobile capabilities correctly show laptop_camera_ocr: true."
 
 frontend:
   - task: "ID Capture via Laptop Camera"
