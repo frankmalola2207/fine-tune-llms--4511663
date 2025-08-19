@@ -560,9 +560,12 @@ function App() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="mobile-kyc" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-3 bg-white/60 backdrop-blur-sm">
+          <TabsList className="grid w-full grid-cols-4 bg-white/60 backdrop-blur-sm">
             <TabsTrigger value="mobile-kyc" className="data-[state=active]:bg-white">
               Mobile eKYC
+            </TabsTrigger>
+            <TabsTrigger value="config" className="data-[state=active]:bg-white">
+              Configuration
             </TabsTrigger>
             <TabsTrigger value="dashboard" className="data-[state=active]:bg-white">
               Analytics
