@@ -142,19 +142,28 @@ const IDScanScreen = () => {
         errorMessage = 'Camera is already in use by another application. Please close other apps using the camera.';
       } else if (error.name === 'OverconstrainedError') {
         errorMessage = 'Camera constraints not supported. Trying basic camera access...';
-        // Try again with basic constraints
+        // Special handling for Apple devices
         try {
+          console.log('🍎 Trying basic constraints for Apple device...');
           const basicStream = await navigator.mediaDevices.getUserMedia({ video: true });
           if (videoRef.current) {
             videoRef.current.srcObject = basicStream;
             streamRef.current = basicStream;
             setCameraActive(true);
-            console.log('✅ Camera started with basic constraints');
-            return;
+            
+            // For Apple devices, ensure video plays
+            try {
+              await videoRef.current.play();
+              console.log('✅ Camera started with basic constraints on Apple device');
+              return;
+            } catch (playError) {
+              console.log('⚠️ Play failed but continuing:', playError);
+              return;
+            }
           }
         } catch (basicError) {
-          console.error('❌ Basic camera access also failed:', basicError);
-          errorMessage = 'Camera access failed. Please check your device permissions.';
+          console.error('❌ Basic camera access also failed on Apple device:', basicError);
+          errorMessage = `Camera access failed on Apple device: ${basicError.message}`;
         }
       }
       
