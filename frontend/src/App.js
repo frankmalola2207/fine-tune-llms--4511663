@@ -715,91 +715,132 @@ function App() {
               </Card>
             )}
 
-            {/* Step 2: Mobile Biometric Capture */}
-            {activeStep === 2 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Contactless Fingerprint */}
-                <Card className="bg-white/70 backdrop-blur-sm border-white/20">
-                  <CardHeader>
-                    <div className="p-3 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 w-fit">
-                      <Fingerprint className="w-6 h-6 text-white" />
-                    </div>
-                    <CardTitle className="text-lg">Contactless Fingerprint</CardTitle>
-                    <CardDescription>Smartphone camera-based fingerprint capture</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {mobileCaptures.fingerprint ? (
-                      <div className="space-y-3">
-                        <Alert>
-                          {getStatusIcon(mobileCaptures.fingerprint.success ? "success" : "failed")}
-                          <AlertDescription>
-                            {mobileCaptures.fingerprint.success 
-                              ? `Quality: ${(mobileCaptures.fingerprint.quality_score * 100).toFixed(1)}% | Features: ${mobileCaptures.fingerprint.features_extracted}`
-                              : mobileCaptures.fingerprint.error
-                            }
-                          </AlertDescription>
-                        </Alert>
-                        {mobileCaptures.fingerprint.success && (
-                          <Badge className="bg-green-100 text-green-800">
-                            Contactless Capture Successful
-                          </Badge>
-                        )}
-                      </div>
-                    ) : (
-                      <Button
-                        onClick={captureMobileFingerprint}
-                        disabled={loading || currentCapture === 'fingerprint'}
-                        className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
-                      >
-                        {currentCapture === 'fingerprint' ? "Capturing..." : "Capture Fingerprint"}
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
+            {/* Step 2: Optional Mobile Biometric Capture */}
+            {activeStep === 2 && shouldShowOptionalBiometrics() && (
+              <div className="space-y-6">
+                {/* Optional Notice */}
+                <Alert>
+                  <AlertTriangle className="w-4 h-4" />
+                  <AlertDescription>
+                    <strong>Optional Biometric Captures:</strong> You can perform these additional security checks or skip to mandatory ID verification.
+                  </AlertDescription>
+                </Alert>
 
-                {/* Facial Liveness Detection */}
-                <Card className="bg-white/70 backdrop-blur-sm border-white/20">
-                  <CardHeader>
-                    <div className="p-3 rounded-lg bg-gradient-to-r from-green-500 to-teal-500 w-fit">
-                      <Eye className="w-6 h-6 text-white" />
-                    </div>
-                    <CardTitle className="text-lg">Facial Liveness</CardTitle>
-                    <CardDescription>Advanced anti-spoofing liveness detection</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {mobileCaptures.facial_liveness ? (
-                      <div className="space-y-3">
-                        <Alert>
-                          {getStatusIcon(mobileCaptures.facial_liveness.success ? "success" : "failed")}
-                          <AlertDescription>
-                            {mobileCaptures.facial_liveness.success 
-                              ? `Liveness: ${mobileCaptures.facial_liveness.is_live ? 'LIVE' : 'NOT LIVE'} | Score: ${(mobileCaptures.facial_liveness.liveness_score * 100).toFixed(1)}%`
-                              : mobileCaptures.facial_liveness.error
-                            }
-                          </AlertDescription>
-                        </Alert>
-                        {mobileCaptures.facial_liveness.success && (
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <Badge variant="outline">
-                              Blinks: {mobileCaptures.facial_liveness.indicators?.blinks_detected || 0}
-                            </Badge>
-                            <Badge variant="outline">
-                              Movement: {mobileCaptures.facial_liveness.indicators?.movement_detected ? 'Yes' : 'No'}
-                            </Badge>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Contactless Fingerprint */}
+                  {biometricConfig?.config?.contactless_fingerprint?.enabled && (
+                    <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div className="p-3 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 w-fit">
+                            <Fingerprint className="w-6 h-6 text-white" />
                           </div>
+                          <Badge className="bg-blue-100 text-blue-800">Optional</Badge>
+                        </div>
+                        <CardTitle className="text-lg">Contactless Fingerprint</CardTitle>
+                        <CardDescription>Smartphone camera-based fingerprint capture</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {mobileCaptures.fingerprint ? (
+                          <div className="space-y-3">
+                            <Alert>
+                              {getStatusIcon(mobileCaptures.fingerprint.success ? "success" : "failed")}
+                              <AlertDescription>
+                                {mobileCaptures.fingerprint.success 
+                                  ? `Quality: ${(mobileCaptures.fingerprint.quality_score * 100).toFixed(1)}% | Features: ${mobileCaptures.fingerprint.features_extracted}`
+                                  : mobileCaptures.fingerprint.error
+                                }
+                              </AlertDescription>
+                            </Alert>
+                            {mobileCaptures.fingerprint.success && (
+                              <Badge className="bg-green-100 text-green-800">
+                                Contactless Capture Successful
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={captureMobileFingerprint}
+                            disabled={loading || currentCapture === 'fingerprint'}
+                            className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                          >
+                            {currentCapture === 'fingerprint' ? "Capturing..." : "Capture Fingerprint"}
+                          </Button>
                         )}
-                      </div>
-                    ) : (
-                      <Button
-                        onClick={captureFacialLiveness}
-                        disabled={loading || currentCapture === 'face'}
-                        className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
-                      >
-                        {currentCapture === 'face' ? "Detecting..." : "Start Liveness Check"}
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Facial Liveness Detection */}
+                  {biometricConfig?.config?.facial_liveness?.enabled && (
+                    <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div className="p-3 rounded-lg bg-gradient-to-r from-green-500 to-teal-500 w-fit">
+                            <Eye className="w-6 h-6 text-white" />
+                          </div>
+                          <Badge className="bg-blue-100 text-blue-800">Optional</Badge>
+                        </div>
+                        <CardTitle className="text-lg">Facial Liveness</CardTitle>
+                        <CardDescription>Advanced anti-spoofing liveness detection</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {mobileCaptures.facial_liveness ? (
+                          <div className="space-y-3">
+                            <Alert>
+                              {getStatusIcon(mobileCaptures.facial_liveness.success ? "success" : "failed")}
+                              <AlertDescription>
+                                {mobileCaptures.facial_liveness.success 
+                                  ? `Liveness: ${mobileCaptures.facial_liveness.is_live ? 'LIVE' : 'NOT LIVE'} | Score: ${(mobileCaptures.facial_liveness.liveness_score * 100).toFixed(1)}%`
+                                  : mobileCaptures.facial_liveness.error
+                                }
+                              </AlertDescription>
+                            </Alert>
+                            {mobileCaptures.facial_liveness.success && (
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <Badge variant="outline">
+                                  Blinks: {mobileCaptures.facial_liveness.indicators?.blinks_detected || 0}
+                                </Badge>
+                                <Badge variant="outline">
+                                  Movement: {mobileCaptures.facial_liveness.indicators?.movement_detected ? 'Yes' : 'No'}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={captureFacialLiveness}
+                            disabled={loading || currentCapture === 'face'}
+                            className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                          >
+                            {currentCapture === 'face' ? "Detecting..." : "Start Liveness Check"}
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button
+                    onClick={skipOptionalBiometrics}
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                  >
+                    <span>Skip Optional Biometrics</span>
+                    <Badge className="bg-red-100 text-red-800 ml-2">Go to Required ID Scan</Badge>
+                  </Button>
+                  
+                  {Object.keys(mobileCaptures).length > 0 && (
+                    <Button
+                      onClick={checkOptionalBiometricsComplete}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                    >
+                      Continue to ID Verification
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
