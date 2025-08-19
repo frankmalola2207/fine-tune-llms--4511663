@@ -591,7 +591,10 @@ class MobileTechnologiesAPITester:
             print("   ✓ Complete mobile eKYC workflow operational")
             print("   ✓ Contactless fingerprint capture working")
             print("   ✓ Facial liveness detection working")
-            print("   ✓ ICAO passport OCR working (mandatory)")
+            print("   ✓ Enhanced ICAO passport OCR with personal information extraction working (mandatory)")
+            print("   ✓ Personal information verification and AI analysis working")
+            print("   ✓ Auto-fill data generation working")
+            print("   ✓ ID-first workflow with personal info extraction operational")
             print("   ✓ NFC chip reading simulation working")
         else:
             print("\n⚠️  Some tests failed. Check the detailed logs above.")
