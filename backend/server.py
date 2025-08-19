@@ -1270,6 +1270,10 @@ async def validate_kyc_workflow(request: dict):
             "success": False,
             "error": f"Workflow validation failed: {str(e)}"
         }
+
+# Legacy KYC endpoints (enhanced)
+@api_router.post("/kyc/initiate")
+async def initiate_kyc(request: dict):
     """Enhanced KYC initiation with mobile capabilities"""
     try:
         # Add mobile capabilities info
