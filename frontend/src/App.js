@@ -147,25 +147,115 @@ function App() {
     }
   };
 
-  // Camera utilities
+  // Enhanced camera utilities with laptop optimization
   const startCamera = async (mode) => {
     try {
       setCaptureMode(mode);
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      
+      // Enhanced camera configuration for different capture modes
+      let cameraConfig = {
         video: { 
           width: { ideal: 1280 }, 
           height: { ideal: 720 },
           facingMode: mode === 'fingerprint' ? 'environment' : 'user'
-        } 
-      });
+        }
+      };
+      
+      // Special configuration for passport/ID capture on laptop
+      if (mode === 'passport') {
+        cameraConfig = {
+          video: {
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
+            facingMode: { ideal: 'environment', exact: false }, // Prefer back camera but allow front
+            focusMode: 'continuous',
+            whiteBalanceMode: 'auto',
+            exposureMode: 'auto',
+            zoom: { ideal: 1.0, min: 1.0, max: 3.0 }
+          }
+        };
+        
+        console.log("📷 Configuring laptop camera for ID document capture...");
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia(cameraConfig);
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setCameraActive(true);
+        
+        // Enhanced settings for laptop cameras
+        if (mode === 'passport') {
+          videoRef.current.onloadedmetadata = () => {
+            console.log(`📹 Camera initialized: ${videoRef.current.videoWidth}x${videoRef.current.videoHeight}`);
+            
+            // Apply video constraints for better document capture
+            const track = stream.getVideoTracks()[0];
+            if (track && track.getCapabilities) {
+              const capabilities = track.getCapabilities();
+              const constraints = {};
+              
+              // Set focus mode if supported
+              if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+                constraints.focusMode = 'continuous';
+              }
+              
+              // Set exposure mode if supported
+              if (capabilities.exposureMode && capabilities.exposureMode.includes('auto')) {
+                constraints.exposureMode = 'auto';
+              }
+              
+              // Set white balance if supported
+              if (capabilities.whiteBalanceMode && capabilities.whiteBalanceMode.includes('auto')) {
+                constraints.whiteBalanceMode = 'auto';
+              }
+              
+              // Apply constraints
+              if (Object.keys(constraints).length > 0) {
+                track.applyConstraints(constraints).then(() => {
+                  console.log("✅ Enhanced camera settings applied for ID capture");
+                }).catch(err => {
+                  console.warn("⚠️ Could not apply enhanced camera settings:", err);
+                });
+              }
+            }
+          };
+        }
       }
     } catch (error) {
-      console.error("Camera access error:", error);
-      alert("Camera access denied. Please enable camera permissions.");
+      console.error("❌ Camera access error:", error);
+      
+      // Enhanced error handling for laptop camera issues
+      let errorMessage = "Camera access denied. Please enable camera permissions.";
+      
+      if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = "No camera found. Please connect a camera and try again.";
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = "Camera is already in use by another application. Please close other apps and try again.";
+      } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+        errorMessage = "Camera doesn't support the required settings. Trying with basic settings...";
+        
+        // Fallback to basic camera settings
+        try {
+          const basicStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480 }
+          });
+          
+          if (videoRef.current) {
+            videoRef.current.srcObject = basicStream;
+            setCameraActive(true);
+            console.log("📹 Camera started with basic settings");
+            return;
+          }
+        } catch (fallbackError) {
+          console.error("❌ Fallback camera access also failed:", fallbackError);
+          errorMessage = "Unable to access camera with any settings. Please check your camera permissions and try again.";
+        }
+      } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = "Camera permission denied. Please enable camera access in your browser settings and reload the page.";
+      }
+      
+      alert(errorMessage);
     }
   };
 
