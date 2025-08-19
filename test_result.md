@@ -165,11 +165,11 @@ backend:
 frontend:
   - task: "ID Capture via Laptop Camera"
     implemented: true
-    working: true
+    working: false
     file: "/app/frontend/src/App.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
@@ -177,18 +177,24 @@ frontend:
         - working: true
           agent: "main"
           comment: "FIXED: Added bioMetricsApi global object with testIDScan function. Enhanced laptop camera support with better error handling, image processing, and device-specific configurations."
+        - working: false
+          agent: "testing"
+          comment: "TESTED: Critical camera constraint issue found. Camera fails with 'Mandatory zoom constraints are not supported' error. Enhanced camera settings with zoom constraints cause getUserMedia to fail. Fallback to basic camera settings needed. bioMetricsApi functions are properly exposed and working, but camera access fails due to unsupported constraints."
 
   - task: "Enhanced Laptop Camera Support"
     implemented: true
-    working: true
+    working: false
     file: "/app/frontend/src/App.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Implemented enhanced camera configuration for laptop cameras, improved image capture with contrast/brightness adjustment, extended capture time for better positioning, and comprehensive error handling with fallback options."
+        - working: false
+          agent: "testing"
+          comment: "TESTED: Enhanced camera configuration causes critical failure. The zoom constraints in enhanced camera settings are not supported by browsers, causing 'Failed to execute getUserMedia' error. Camera modal doesn't open due to this constraint issue. Fallback mechanism exists but needs to be triggered properly. UI workflow and API integration work correctly when camera constraints are compatible."
 
 metadata:
   created_by: "main_agent"
