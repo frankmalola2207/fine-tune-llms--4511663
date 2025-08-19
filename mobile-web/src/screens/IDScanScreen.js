@@ -505,6 +505,7 @@ const IDScanScreen = () => {
               className="camera-video"
               autoPlay
               playsInline
+              webkit-playsinline="true"
               muted
               controls={process.env.NODE_ENV === 'development'}
             />
