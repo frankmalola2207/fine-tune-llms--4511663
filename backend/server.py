@@ -1665,15 +1665,11 @@ async def initiate_kyc(request: dict):
         raise HTTPException(status_code=500, detail=f"KYC initiation failed: {str(e)}")
 
 # Include the router in the main app
-# Mount static files for mobile-web app
-app.mount("/mobile", StaticFiles(directory="/app/mobile-web/build"), name="mobile-web")
-
-# Serve mobile-web app at /mobile route
-@app.get("/mobile")
-async def serve_mobile_app():
-    return FileResponse("/app/mobile-web/build/index.html")
-
 app.include_router(api_router)
+
+# Mount static files for mobile-web app - this must come AFTER api_router
+app.mount("/mobile/static", StaticFiles(directory="/app/mobile-web/build/static"), name="mobile-static")
+app.mount("/mobile", StaticFiles(directory="/app/mobile-web/build", html=True), name="mobile-web")
 
 app.add_middleware(
     CORSMiddleware,
