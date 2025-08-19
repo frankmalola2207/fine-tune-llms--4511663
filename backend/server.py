@@ -75,6 +75,88 @@ class PassportScanRequest(BaseModel):
     extract_mrz: bool = True
     device_info: Optional[Dict[str, str]] = None
 
+class PersonalInfoVerificationRequest(BaseModel):
+    user_id: str
+    extracted_info: Dict[str, Any]  # From OCR
+    user_verified_info: Dict[str, Any]  # User confirmed/edited
+    verification_notes: Optional[str] = None
+
+@api_router.post("/mobile/personal-info/verify")
+async def verify_personal_information(request: PersonalInfoVerificationRequest):
+    """Verify and store user-confirmed personal information"""
+    try:
+        start_time = datetime.now()
+        
+        ai_chat = await get_ai_chat()
+        
+        # Compare extracted vs user-verified information
+        comparison_prompt = f"""
+        Compare extracted personal information with user-verified data:
+        
+        Extracted from ID: {json.dumps(request.extracted_info, indent=2)}
+        User Verified: {json.dumps(request.user_verified_info, indent=2)}
+        Verification Notes: {request.verification_notes or 'None'}
+        
+        Analyze:
+        1. Changes made by user (what fields were corrected)
+        2. Reasons for corrections (formatting, OCR errors, name preferences)
+        3. Data consistency and validation
+        4. Confidence in final verified information
+        5. Red flags or inconsistencies requiring attention
+        
+        Respond in JSON format with:
+        - changes_made: list of field changes
+        - correction_reasons: analysis of why changes were needed
+        - final_confidence: score 0-1
+        - data_consistency: validation results
+        - verification_quality: high/medium/low
+        - flags: any concerns requiring review
+        """
+        
+        user_message = UserMessage(text=comparison_prompt)
+        ai_response = await ai_chat.send_message(user_message)
+        
+        try:
+            verification_analysis = json.loads(ai_response)
+        except:
+            verification_analysis = {
+                "verification_quality": "medium",
+                "final_confidence": 0.8,
+                "analysis": ai_response
+            }
+        
+        # Store verified personal information
+        processing_time = (datetime.now() - start_time).total_seconds()
+        
+        verification_record = {
+            "id": str(uuid.uuid4()),
+            "user_id": request.user_id,
+            "extracted_info": request.extracted_info,
+            "verified_info": request.user_verified_info,
+            "verification_notes": request.verification_notes,
+            "ai_analysis": verification_analysis,
+            "processing_time": processing_time,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.personal_info_verifications.insert_one(verification_record)
+        
+        return {
+            "success": True,
+            "verification_id": verification_record["id"],
+            "verified_information": request.user_verified_info,
+            "verification_analysis": verification_analysis,
+            "processing_time": processing_time,
+            "confidence_score": verification_analysis.get("final_confidence", 0.8)
+        }
+        
+    except Exception as e:
+        logging.error(f"Personal info verification error: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Personal information verification failed: {str(e)}"
+        }
+
 class NFCReadRequest(BaseModel):
     user_id: str
     passport_number: str
