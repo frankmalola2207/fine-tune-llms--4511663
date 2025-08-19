@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./App.css";
 import axios from "axios";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
@@ -23,7 +23,13 @@ import {
   Scan,
   Eye,
   Lock,
-  Globe
+  Globe,
+  Smartphone,
+  Nfc,
+  Zap,
+  Target,
+  Award,
+  Activity
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -39,11 +45,19 @@ function App() {
     nationality: "",
     user_id: ""
   });
-  const [biometricStatus, setBiometricStatus] = useState({});
-  const [documentStatus, setDocumentStatus] = useState({});
-  const [riskAssessment, setRiskAssessment] = useState({});
+  
+  // Mobile biometric states
+  const [mobileCaptures, setMobileCaptures] = useState({});
   const [loading, setLoading] = useState(false);
   const [dashboard, setDashboard] = useState(null);
+  const [mobileDashboard, setMobileDashboard] = useState(null);
+  const [currentCapture, setCurrentCapture] = useState(null);
+  
+  // Camera references
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [captureMode, setCaptureMode] = useState(''); // 'fingerprint', 'face', 'passport'
 
   useEffect(() => {
     // Generate unique user ID on mount
@@ -52,6 +66,7 @@ function App() {
       user_id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     }));
     fetchDashboard();
+    fetchMobileDashboard();
   }, []);
 
   const fetchDashboard = async () => {
@@ -60,6 +75,15 @@ function App() {
       setDashboard(response.data);
     } catch (error) {
       console.error("Dashboard fetch error:", error);
+    }
+  };
+
+  const fetchMobileDashboard = async () => {
+    try {
+      const response = await axios.get(`${API}/mobile/dashboard`);
+      setMobileDashboard(response.data);
+    } catch (error) {
+      console.error("Mobile dashboard fetch error:", error);
     }
   };
 
@@ -88,94 +112,264 @@ function App() {
     }
   };
 
-  const simulateBiometricCapture = async (captureType) => {
-    setLoading(true);
+  // Camera utilities
+  const startCamera = async (mode) => {
     try {
-      const response = await axios.post(`${API}/biometric/capture`, {
-        user_id: kycData.user_id,
-        capture_type: captureType,
-        simulated_quality: Math.random() * 0.3 + 0.7 // Simulate 0.7-1.0 quality
+      setCaptureMode(mode);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 1280 }, 
+          height: { ideal: 720 },
+          facingMode: mode === 'fingerprint' ? 'environment' : 'user'
+        } 
       });
-
-      setBiometricStatus(prev => ({
-        ...prev,
-        [captureType]: response.data
-      }));
-
-      // Check if all biometric types are captured
-      const allCaptured = ["fingerprint", "facial", "document_scan"].every(
-        type => biometricStatus[type] || captureType === type
-      );
-
-      if (allCaptured) {
-        setActiveStep(3);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setCameraActive(true);
       }
     } catch (error) {
-      console.error("Biometric capture error:", error);
-      alert(`Failed to capture ${captureType}`);
-    } finally {
-      setLoading(false);
+      console.error("Camera access error:", error);
+      alert("Camera access denied. Please enable camera permissions.");
     }
   };
 
-  const simulateDocumentVerification = async () => {
-    setLoading(true);
-    try {
-      const documentData = {
-        document_number: kycData.document_number,
-        first_name: kycData.first_name,
-        last_name: kycData.last_name,
-        date_of_birth: kycData.date_of_birth,
-        nationality: kycData.nationality,
-        issue_date: "2020-01-15",
-        expiry_date: "2030-01-15",
-        issuing_authority: `${kycData.nationality} Government`
-      };
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const tracks = videoRef.current.srcObject.getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+    setCaptureMode('');
+  };
 
-      const response = await axios.post(`${API}/document/verify`, {
+  const captureImage = () => {
+    if (!videoRef.current || !canvasRef.current) return null;
+
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    const context = canvas.getContext('2d');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0);
+
+    return canvas.toDataURL('image/jpeg', 0.8).split(',')[1]; // Return base64 without prefix
+  };
+
+  // Mobile biometric capture functions
+  const captureMobileFingerprint = async () => {
+    setLoading(true);
+    setCurrentCapture('fingerprint');
+    
+    try {
+      await startCamera('fingerprint');
+      
+      // Wait for user to position finger
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const imageData = captureImage();
+      if (!imageData) {
+        throw new Error("Failed to capture fingerprint image");
+      }
+
+      stopCamera();
+
+      const response = await axios.post(`${API}/mobile/fingerprint/capture`, {
         user_id: kycData.user_id,
-        document_type: "passport",
-        document_data: documentData
+        image_data: imageData,
+        device_info: {
+          user_agent: navigator.userAgent,
+          platform: navigator.platform,
+          timestamp: new Date().toISOString()
+        },
+        quality_threshold: 0.6
       });
 
-      setDocumentStatus(response.data);
-      setActiveStep(4);
+      setMobileCaptures(prev => ({
+        ...prev,
+        fingerprint: response.data
+      }));
+
+      if (response.data.success) {
+        // Move to next step if all mobile captures are done
+        checkMobileCapturesComplete();
+      }
+
     } catch (error) {
-      console.error("Document verification error:", error);
-      alert("Failed to verify document");
+      console.error("Mobile fingerprint capture error:", error);
+      alert(`Fingerprint capture failed: ${error.response?.data?.error || error.message}`);
     } finally {
       setLoading(false);
+      setCurrentCapture(null);
+      stopCamera();
     }
   };
 
-  const performRiskAssessment = async () => {
+  const captureFacialLiveness = async () => {
     setLoading(true);
+    setCurrentCapture('face');
+    
     try {
-      const response = await axios.post(`${API}/risk/assess`, {
+      await startCamera('face');
+      
+      // Capture sequence of frames for liveness detection
+      const frameSequence = [];
+      
+      for (let i = 0; i < 10; i++) {
+        await new Promise(resolve => setTimeout(resolve, 300)); // 300ms intervals
+        const frameData = captureImage();
+        if (frameData) {
+          frameSequence.push(frameData);
+        }
+      }
+
+      stopCamera();
+
+      if (frameSequence.length < 5) {
+        throw new Error("Insufficient frames captured for liveness detection");
+      }
+
+      const response = await axios.post(`${API}/mobile/face/liveness`, {
         user_id: kycData.user_id,
-        additional_context: {
-          application_source: "web_portal",
-          device_info: navigator.userAgent,
+        frame_sequence: frameSequence,
+        device_info: {
+          user_agent: navigator.userAgent,
+          platform: navigator.platform,
+          timestamp: new Date().toISOString()
+        },
+        liveness_threshold: 0.6
+      });
+
+      setMobileCaptures(prev => ({
+        ...prev,
+        facial_liveness: response.data
+      }));
+
+      if (response.data.success) {
+        checkMobileCapturesComplete();
+      }
+
+    } catch (error) {
+      console.error("Facial liveness capture error:", error);
+      alert(`Facial liveness detection failed: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
+      setCurrentCapture(null);
+      stopCamera();
+    }
+  };
+
+  const capturePassportOCR = async () => {
+    setLoading(true);
+    setCurrentCapture('passport');
+    
+    try {
+      await startCamera('passport');
+      
+      // Wait for user to position passport
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      const imageData = captureImage();
+      if (!imageData) {
+        throw new Error("Failed to capture passport image");
+      }
+
+      stopCamera();
+
+      const response = await axios.post(`${API}/mobile/passport/scan`, {
+        user_id: kycData.user_id,
+        passport_image: imageData,
+        extract_mrz: true,
+        device_info: {
+          user_agent: navigator.userAgent,
+          platform: navigator.platform,
           timestamp: new Date().toISOString()
         }
       });
 
-      setRiskAssessment(response.data);
-      setActiveStep(5);
-      fetchDashboard(); // Refresh dashboard
+      setMobileCaptures(prev => ({
+        ...prev,
+        passport_ocr: response.data
+      }));
+
+      if (response.data.success) {
+        // Auto-fill form data from passport
+        const passportData = response.data.passport_data;
+        if (passportData) {
+          setKycData(prev => ({
+            ...prev,
+            first_name: passportData.given_names || prev.first_name,
+            last_name: passportData.surname || prev.last_name,
+            document_number: passportData.passport_number || prev.document_number,
+            nationality: passportData.nationality || prev.nationality,
+            date_of_birth: passportData.birth_date ? 
+              `20${passportData.birth_date.substring(0,2)}-${passportData.birth_date.substring(2,4)}-${passportData.birth_date.substring(4,6)}` : 
+              prev.date_of_birth
+          }));
+        }
+        
+        setActiveStep(3);
+      }
+
     } catch (error) {
-      console.error("Risk assessment error:", error);
-      alert("Failed to perform risk assessment");
+      console.error("Passport OCR capture error:", error);
+      alert(`Passport scan failed: ${error.response?.data?.error || error.message}`);
     } finally {
       setLoading(false);
+      setCurrentCapture(null);
+      stopCamera();
+    }
+  };
+
+  const performNFCRead = async () => {
+    setLoading(true);
+    
+    try {
+      const response = await axios.post(`${API}/mobile/nfc/read`, {
+        user_id: kycData.user_id,
+        passport_number: kycData.document_number,
+        birth_date: kycData.date_of_birth.replace(/-/g, '').substring(2), // Convert to YYMMDD
+        expiry_date: "301231", // Mock expiry date
+        device_info: {
+          user_agent: navigator.userAgent,
+          platform: navigator.platform,
+          nfc_available: 'nfc' in navigator,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      setMobileCaptures(prev => ({
+        ...prev,
+        nfc_read: response.data
+      }));
+
+      if (response.data.success) {
+        setActiveStep(4);
+        fetchMobileDashboard(); // Refresh mobile dashboard
+      }
+
+    } catch (error) {
+      console.error("NFC reading error:", error);
+      alert(`NFC reading failed: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkMobileCapturesComplete = () => {
+    const captures = Object.keys(mobileCaptures);
+    if (captures.length >= 2) { // At least 2 biometric captures
+      setActiveStep(3);
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "approved": return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case "rejected": return <XCircle className="w-5 h-5 text-red-500" />;
-      case "review_required": return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
+      case "success": return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case "failed": return <XCircle className="w-5 h-5 text-red-500" />;
+      case "processing": return <Clock className="w-5 h-5 text-yellow-500 animate-spin" />;
       default: return <Clock className="w-5 h-5 text-gray-500" />;
     }
   };
@@ -188,63 +382,143 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Header */}
+      {/* Enhanced Header */}
       <header className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl">
-                <Shield className="w-8 h-8 text-white" />
+                <Smartphone className="w-8 h-8 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                   Mobile-Technologies
                 </h1>
-                <p className="text-sm text-gray-600">Agentic AI eKYC Platform</p>
+                <p className="text-sm text-gray-600">Advanced Mobile Biometric eKYC Platform</p>
               </div>
             </div>
             <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-4">
+                <Badge className="bg-green-100 text-green-800 border-green-200">
+                  <Smartphone className="w-3 h-3 mr-1" />
+                  Mobile-First
+                </Badge>
+                <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                  <Zap className="w-3 h-3 mr-1" />
+                  AI-Powered
+                </Badge>
+                <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                  <Shield className="w-3 h-3 mr-1" />
+                  Contactless
+                </Badge>
+              </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Globe className="w-4 h-4" />
                 <span>GDPR • CCPA • Singapore Compliant</span>
               </div>
-              <Badge className="bg-green-100 text-green-800 border-green-200">
-                <Lock className="w-3 h-3 mr-1" />
-                Secure
-              </Badge>
             </div>
           </div>
         </div>
       </header>
 
+      {/* Camera Modal */}
+      {cameraActive && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                {captureMode === 'fingerprint' && 'Position your finger in the camera view'}
+                {captureMode === 'face' && 'Look at the camera for liveness detection'}
+                {captureMode === 'passport' && 'Position passport MRZ in camera view'}
+              </h3>
+              <Button onClick={stopCamera} variant="outline" size="sm">
+                Cancel
+              </Button>
+            </div>
+            
+            <div className="relative">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                className="w-full rounded-lg"
+                style={{ maxHeight: '400px' }}
+              />
+              <canvas ref={canvasRef} className="hidden" />
+              
+              {/* Capture guidelines */}
+              <div className="absolute inset-0 pointer-events-none">
+                {captureMode === 'fingerprint' && (
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    <div className="w-32 h-40 border-2 border-green-400 rounded-lg bg-green-100 bg-opacity-20 flex items-center justify-center">
+                      <Fingerprint className="w-8 h-8 text-green-600" />
+                    </div>
+                  </div>
+                )}
+                
+                {captureMode === 'face' && (
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    <div className="w-48 h-56 border-2 border-blue-400 rounded-full bg-blue-100 bg-opacity-20 flex items-center justify-center">
+                      <Camera className="w-8 h-8 text-blue-600" />
+                    </div>
+                  </div>
+                )}
+                
+                {captureMode === 'passport' && (
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                    <div className="w-80 h-24 border-2 border-orange-400 rounded-lg bg-orange-100 bg-opacity-20 flex items-center justify-center">
+                      <FileText className="w-8 h-8 text-orange-600" />
+                      <span className="ml-2 text-orange-700 font-medium">MRZ Area</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {loading && (
+              <div className="mt-4 text-center">
+                <div className="animate-pulse text-blue-600">Processing capture...</div>
+                <Progress value={75} className="mt-2" />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="kyc" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-2 bg-white/60 backdrop-blur-sm">
-            <TabsTrigger value="kyc" className="data-[state=active]:bg-white">
-              KYC Verification
+        <Tabs defaultValue="mobile-kyc" className="space-y-8">
+          <TabsList className="grid w-full grid-cols-3 bg-white/60 backdrop-blur-sm">
+            <TabsTrigger value="mobile-kyc" className="data-[state=active]:bg-white">
+              Mobile eKYC
             </TabsTrigger>
             <TabsTrigger value="dashboard" className="data-[state=active]:bg-white">
-              Dashboard
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="mobile-dashboard" className="data-[state=active]:bg-white">
+              Mobile Stats
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="kyc" className="space-y-8">
-            {/* Progress Indicator */}
+          <TabsContent value="mobile-kyc" className="space-y-8">
+            {/* Enhanced Progress Indicator */}
             <Card className="bg-white/60 backdrop-blur-sm border-white/20">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <TrendingUp className="w-5 h-5" />
-                  <span>Verification Progress</span>
+                  <span>Mobile Biometric Verification Progress</span>
                 </CardTitle>
+                <CardDescription>
+                  Advanced contactless biometric capture using smartphone technology
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between mb-4">
                   {[
                     { step: 1, label: "Personal Info", icon: Users },
-                    { step: 2, label: "Biometrics", icon: Scan },
-                    { step: 3, label: "Document", icon: FileText },
-                    { step: 4, label: "Risk Assessment", icon: Shield },
-                    { step: 5, label: "Complete", icon: CheckCircle }
+                    { step: 2, label: "Mobile Biometrics", icon: Smartphone },
+                    { step: 3, label: "Document Scan", icon: FileText },
+                    { step: 4, label: "NFC Verification", icon: Nfc },
+                    { step: 5, label: "Complete", icon: Award }
                   ].map(({ step, label, icon: Icon }) => (
                     <div key={step} className="flex flex-col items-center space-y-2">
                       <div className={`p-3 rounded-full border-2 transition-all duration-300 ${
@@ -277,7 +551,7 @@ function App() {
                     <span>Personal Information</span>
                   </CardTitle>
                   <CardDescription>
-                    Enter your personal details to begin the KYC verification process
+                    Enter your details to begin advanced mobile biometric verification
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -338,129 +612,155 @@ function App() {
                     disabled={loading}
                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
                   >
-                    {loading ? "Initiating..." : "Start KYC Process"}
+                    {loading ? "Initiating..." : "Start Mobile eKYC Process"}
                   </Button>
                 </CardContent>
               </Card>
             )}
 
-            {/* Step 2: Biometric Capture */}
+            {/* Step 2: Mobile Biometric Capture */}
             {activeStep === 2 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[
-                  {
-                    type: "fingerprint",
-                    title: "Fingerprint Capture",
-                    description: "Contactless fingerprint verification",
-                    icon: Fingerprint,
-                    color: "from-purple-500 to-pink-500"
-                  },
-                  {
-                    type: "facial",
-                    title: "Facial Recognition",
-                    description: "Liveness detection and facial matching",
-                    icon: Camera,
-                    color: "from-green-500 to-teal-500"
-                  },
-                  {
-                    type: "document_scan",
-                    title: "Document Scan",
-                    description: "OCR and security feature analysis",
-                    icon: Scan,
-                    color: "from-orange-500 to-red-500"
-                  }
-                ].map(({ type, title, description, icon: Icon, color }) => (
-                  <Card key={type} className="bg-white/70 backdrop-blur-sm border-white/20">
-                    <CardHeader>
-                      <div className={`p-3 rounded-lg bg-gradient-to-r ${color} w-fit`}>
-                        <Icon className="w-6 h-6 text-white" />
-                      </div>
-                      <CardTitle className="text-lg">{title}</CardTitle>
-                      <CardDescription>{description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {biometricStatus[type] ? (
-                        <div className="space-y-3">
-                          <Alert>
-                            <CheckCircle className="w-4 h-4" />
-                            <AlertDescription>
-                              Capture successful! Quality: {
-                                (biometricStatus[type].analysis?.quality_score || 0.85 * 100).toFixed(1)
-                              }%
-                            </AlertDescription>
-                          </Alert>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Contactless Fingerprint */}
+                <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                  <CardHeader>
+                    <div className="p-3 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 w-fit">
+                      <Fingerprint className="w-6 h-6 text-white" />
+                    </div>
+                    <CardTitle className="text-lg">Contactless Fingerprint</CardTitle>
+                    <CardDescription>Smartphone camera-based fingerprint capture</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {mobileCaptures.fingerprint ? (
+                      <div className="space-y-3">
+                        <Alert>
+                          {getStatusIcon(mobileCaptures.fingerprint.success ? "success" : "failed")}
+                          <AlertDescription>
+                            {mobileCaptures.fingerprint.success 
+                              ? `Quality: ${(mobileCaptures.fingerprint.quality_score * 100).toFixed(1)}% | Features: ${mobileCaptures.fingerprint.features_extracted}`
+                              : mobileCaptures.fingerprint.error
+                            }
+                          </AlertDescription>
+                        </Alert>
+                        {mobileCaptures.fingerprint.success && (
                           <Badge className="bg-green-100 text-green-800">
-                            {biometricStatus[type].analysis?.recommendation || "Accepted"}
+                            Contactless Capture Successful
                           </Badge>
-                        </div>
-                      ) : (
-                        <Button
-                          onClick={() => simulateBiometricCapture(type)}
-                          disabled={loading}
-                          className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
-                        >
-                          {loading ? "Capturing..." : `Capture ${title.split(' ')[0]}`}
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                        )}
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={captureMobileFingerprint}
+                        disabled={loading || currentCapture === 'fingerprint'}
+                        className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                      >
+                        {currentCapture === 'fingerprint' ? "Capturing..." : "Capture Fingerprint"}
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Facial Liveness Detection */}
+                <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                  <CardHeader>
+                    <div className="p-3 rounded-lg bg-gradient-to-r from-green-500 to-teal-500 w-fit">
+                      <Eye className="w-6 h-6 text-white" />
+                    </div>
+                    <CardTitle className="text-lg">Facial Liveness</CardTitle>
+                    <CardDescription>Advanced anti-spoofing liveness detection</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {mobileCaptures.facial_liveness ? (
+                      <div className="space-y-3">
+                        <Alert>
+                          {getStatusIcon(mobileCaptures.facial_liveness.success ? "success" : "failed")}
+                          <AlertDescription>
+                            {mobileCaptures.facial_liveness.success 
+                              ? `Liveness: ${mobileCaptures.facial_liveness.is_live ? 'LIVE' : 'NOT LIVE'} | Score: ${(mobileCaptures.facial_liveness.liveness_score * 100).toFixed(1)}%`
+                              : mobileCaptures.facial_liveness.error
+                            }
+                          </AlertDescription>
+                        </Alert>
+                        {mobileCaptures.facial_liveness.success && (
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <Badge variant="outline">
+                              Blinks: {mobileCaptures.facial_liveness.indicators?.blinks_detected || 0}
+                            </Badge>
+                            <Badge variant="outline">
+                              Movement: {mobileCaptures.facial_liveness.indicators?.movement_detected ? 'Yes' : 'No'}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={captureFacialLiveness}
+                        disabled={loading || currentCapture === 'face'}
+                        className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                      >
+                        {currentCapture === 'face' ? "Detecting..." : "Start Liveness Check"}
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             )}
 
-            {/* Step 3: Document Verification */}
+            {/* Step 3: Document Scanning */}
             {activeStep === 3 && (
               <Card className="bg-white/70 backdrop-blur-sm border-white/20">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <FileText className="w-5 h-5" />
-                    <span>Document Verification</span>
+                    <Scan className="w-5 h-5" />
+                    <span>ICAO Passport OCR</span>
                   </CardTitle>
                   <CardDescription>
-                    AI-powered analysis of your identity document
+                    Mobile-optimized passport scanning with MRZ extraction
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {documentStatus.verification_result ? (
+                  {mobileCaptures.passport_ocr ? (
                     <div className="space-y-4">
                       <Alert>
-                        <CheckCircle className="w-4 h-4" />
+                        {getStatusIcon(mobileCaptures.passport_ocr.success ? "success" : "failed")}
                         <AlertDescription>
-                          Document verified successfully! Confidence: {
-                            (documentStatus.verification_result.confidence_score * 100).toFixed(1)
-                          }%
+                          {mobileCaptures.passport_ocr.success 
+                            ? `OCR Confidence: ${(mobileCaptures.passport_ocr.ocr_confidence * 100).toFixed(1)}%`
+                            : mobileCaptures.passport_ocr.error
+                          }
                         </AlertDescription>
                       </Alert>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium">Recommendation:</span>
-                          <Badge className="ml-2 bg-green-100 text-green-800">
-                            {documentStatus.verification_result.recommendation}
-                          </Badge>
+                      
+                      {mobileCaptures.passport_ocr.success && mobileCaptures.passport_ocr.passport_data && (
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="font-semibold mb-2">Extracted Data:</h4>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div><strong>Name:</strong> {mobileCaptures.passport_ocr.passport_data.surname}, {mobileCaptures.passport_ocr.passport_data.given_names}</div>
+                            <div><strong>Document:</strong> {mobileCaptures.passport_ocr.passport_data.passport_number}</div>
+                            <div><strong>Nationality:</strong> {mobileCaptures.passport_ocr.passport_data.nationality}</div>
+                            <div><strong>Birth Date:</strong> {mobileCaptures.passport_ocr.passport_data.birth_date}</div>
+                          </div>
                         </div>
-                        <div>
-                          <span className="font-medium">Document ID:</span>
-                          <span className="ml-2 text-gray-600">{documentStatus.document_id}</span>
-                        </div>
-                      </div>
+                      )}
+                      
                       <Button
-                        onClick={performRiskAssessment}
+                        onClick={() => setActiveStep(4)}
                         className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
                       >
-                        Proceed to Risk Assessment
+                        Proceed to NFC Verification
                       </Button>
                     </div>
                   ) : (
                     <div className="text-center space-y-4">
                       <div className="p-8 border-2 border-dashed border-gray-300 rounded-lg">
-                        <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                        <p className="text-gray-600 mb-4">Ready to verify your document</p>
+                        <Scan className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                        <p className="text-gray-600 mb-4">Position passport MRZ area in camera view</p>
                         <Button
-                          onClick={simulateDocumentVerification}
-                          disabled={loading}
-                          className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                          onClick={capturePassportOCR}
+                          disabled={loading || currentCapture === 'passport'}
+                          className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
                         >
-                          {loading ? "Verifying..." : "Verify Document"}
+                          {currentCapture === 'passport' ? "Scanning..." : "Scan Passport"}
                         </Button>
                       </div>
                     </div>
@@ -469,83 +769,109 @@ function App() {
               </Card>
             )}
 
-            {/* Step 4: Risk Assessment */}
+            {/* Step 4: NFC Verification */}
             {activeStep === 4 && (
               <Card className="bg-white/70 backdrop-blur-sm border-white/20">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Shield className="w-5 h-5" />
-                    <span>AI Risk Assessment</span>
+                    <Nfc className="w-5 h-5" />
+                    <span>NFC Chip Verification</span>
                   </CardTitle>
                   <CardDescription>
-                    Comprehensive analysis for final KYC decision
+                    ICAO 9303 compliant NFC chip reading and validation
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center space-y-4">
-                    <div className="p-8">
-                      <Eye className="w-16 h-16 mx-auto text-blue-500 mb-4 animate-pulse" />
-                      <p className="text-gray-600 mb-4">Analyzing all verification data...</p>
+                  {mobileCaptures.nfc_read ? (
+                    <div className="space-y-4">
+                      <Alert>
+                        {getStatusIcon(mobileCaptures.nfc_read.success ? "success" : "failed")}
+                        <AlertDescription>
+                          {mobileCaptures.nfc_read.success 
+                            ? `NFC Reading Complete | Security Level: ${mobileCaptures.nfc_read.security_level}`
+                            : mobileCaptures.nfc_read.error
+                          }
+                        </AlertDescription>
+                      </Alert>
+                      
+                      {mobileCaptures.nfc_read.success && (
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <h4 className="font-semibold mb-2 text-green-800">NFC Authentication:</h4>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <Badge className="bg-green-100 text-green-800">
+                              <Shield className="w-3 h-3 mr-1" />
+                              Chip Authentic
+                            </Badge>
+                            <Badge className="bg-blue-100 text-blue-800">
+                              <Target className="w-3 h-3 mr-1" />
+                              BAC Verified
+                            </Badge>
+                          </div>
+                        </div>
+                      )}
+                      
                       <Button
-                        onClick={performRiskAssessment}
-                        disabled={loading}
-                        className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                        onClick={() => setActiveStep(5)}
+                        className="w-full bg-gradient-to-r from-green-600 to-teal-600 text-white"
                       >
-                        {loading ? "Assessing Risk..." : "Perform Risk Assessment"}
+                        Complete Verification
                       </Button>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="text-center space-y-4">
+                      <div className="p-8 border-2 border-dashed border-blue-300 rounded-lg">
+                        <Nfc className="w-16 h-16 mx-auto text-blue-500 mb-4 animate-pulse" />
+                        <p className="text-gray-600 mb-4">Simulating NFC chip reading...</p>
+                        <Button
+                          onClick={performNFCRead}
+                          disabled={loading}
+                          className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                        >
+                          {loading ? "Reading NFC..." : "Start NFC Reading"}
+                        </Button>
+                        <p className="text-xs text-gray-500 mt-2">
+                          *Demonstration mode - Real NFC reading requires compatible hardware
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
 
-            {/* Step 5: Results */}
-            {activeStep === 5 && riskAssessment.risk_assessment && (
+            {/* Step 5: Completion */}
+            {activeStep === 5 && (
               <Card className="bg-white/70 backdrop-blur-sm border-white/20">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    {getStatusIcon(riskAssessment.kyc_decision)}
-                    <span>KYC Verification Complete</span>
+                    <Award className="w-5 h-5 text-green-600" />
+                    <span>Mobile eKYC Complete</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className={`p-6 rounded-lg border-2 ${
-                    riskAssessment.kyc_decision === "approved" 
-                      ? "bg-green-50 border-green-200" 
-                      : riskAssessment.kyc_decision === "rejected"
-                      ? "bg-red-50 border-red-200"
-                      : "bg-yellow-50 border-yellow-200"
-                  }`}>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold mb-2 capitalize">
-                        {riskAssessment.kyc_decision.replace('_', ' ')}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        Risk Score: {(riskAssessment.risk_assessment.risk_score * 100).toFixed(1)}%
-                      </div>
-                    </div>
+                  <div className="text-center p-6 bg-gradient-to-r from-green-50 to-teal-50 rounded-lg border border-green-200">
+                    <Award className="w-16 h-16 mx-auto text-green-600 mb-4" />
+                    <h3 className="text-2xl font-bold text-green-800 mb-2">Verification Successful!</h3>
+                    <p className="text-green-700">All mobile biometric captures completed successfully</p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Confidence Level</Label>
-                      <Progress 
-                        value={(riskAssessment.risk_assessment.confidence || 0.8) * 100} 
-                        className="h-3" 
-                      />
-                      <div className="text-sm text-gray-600">
-                        {((riskAssessment.risk_assessment.confidence || 0.8) * 100).toFixed(1)}% confident
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {Object.entries(mobileCaptures).map(([type, data]) => (
+                      <div key={type} className="text-center p-3 bg-white rounded-lg border">
+                        <div className="mb-2">
+                          {type === 'fingerprint' && <Fingerprint className="w-6 h-6 mx-auto text-purple-600" />}
+                          {type === 'facial_liveness' && <Eye className="w-6 h-6 mx-auto text-green-600" />}
+                          {type === 'passport_ocr' && <Scan className="w-6 h-6 mx-auto text-orange-600" />}
+                          {type === 'nfc_read' && <Nfc className="w-6 h-6 mx-auto text-blue-600" />}
+                        </div>
+                        <div className="text-xs font-medium text-gray-700 capitalize">
+                          {type.replace('_', ' ')}
+                        </div>
+                        <Badge className={`mt-1 ${data.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          {data.success ? 'Success' : 'Failed'}
+                        </Badge>
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Compliance Status</Label>
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-sm">
-                          {riskAssessment.risk_assessment.compliance_status || "Compliant"}
-                        </span>
-                      </div>
-                    </div>
+                    ))}
                   </div>
 
                   <Button
@@ -559,9 +885,7 @@ function App() {
                         nationality: "",
                         user_id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
                       });
-                      setBiometricStatus({});
-                      setDocumentStatus({});
-                      setRiskAssessment({});
+                      setMobileCaptures({});
                     }}
                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
                   >
@@ -572,6 +896,7 @@ function App() {
             )}
           </TabsContent>
 
+          {/* Analytics Dashboard */}
           <TabsContent value="dashboard">
             {dashboard && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -604,11 +929,147 @@ function App() {
 
                 <Card className="bg-white/70 backdrop-blur-sm border-white/20">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600">Approval Rate</CardTitle>
+                    <CardTitle className="text-sm font-medium text-gray-600">Success Rate</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-blue-600">
                       {dashboard.statistics.approval_rate.toFixed(1)}%
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Mobile Dashboard */}
+          <TabsContent value="mobile-dashboard">
+            {mobileDashboard && (
+              <div className="space-y-6">
+                {/* Mobile Statistics */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
+                        <Activity className="w-4 h-4 mr-2" />
+                        Total Captures
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{mobileDashboard.statistics.total_captures}</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
+                        <Fingerprint className="w-4 h-4 mr-2" />
+                        Fingerprints
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-purple-600">{mobileDashboard.statistics.fingerprint_captures}</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
+                        <Eye className="w-4 h-4 mr-2" />
+                        Liveness
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-600">{mobileDashboard.statistics.liveness_checks}</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
+                        <Scan className="w-4 h-4 mr-2" />
+                        OCR Scans
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-orange-600">{mobileDashboard.statistics.passport_scans}</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
+                        <Nfc className="w-4 h-4 mr-2" />
+                        NFC Reads
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-blue-600">{mobileDashboard.statistics.nfc_reads}</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Success Rates */}
+                <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                  <CardHeader>
+                    <CardTitle>Mobile Capture Success Rates</CardTitle>
+                    <CardDescription>Quality scores and success rates by capture type</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {Object.entries(mobileDashboard.success_rates).map(([type, rate]) => (
+                        <div key={type} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            {type === 'mobile_fingerprint' && <Fingerprint className="w-5 h-5 text-purple-600" />}
+                            {type === 'mobile_facial_liveness' && <Eye className="w-5 h-5 text-green-600" />}
+                            {type === 'mobile_passport_ocr' && <Scan className="w-5 h-5 text-orange-600" />}
+                            {type === 'mobile_nfc_read' && <Nfc className="w-5 h-5 text-blue-600" />}
+                            <span className="font-medium capitalize">{type.replace('mobile_', '').replace('_', ' ')}</span>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <Progress value={rate} className="w-24" />
+                            <span className="text-sm font-semibold">{rate.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Target className="w-5 h-5 text-blue-600" />
+                        <span className="font-semibold text-blue-800">Average Quality Score</span>
+                      </div>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {(mobileDashboard.statistics.average_quality * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Mobile Capabilities */}
+                <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                  <CardHeader>
+                    <CardTitle>Platform Capabilities</CardTitle>
+                    <CardDescription>Advanced mobile biometric features</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {Object.entries(mobileDashboard.mobile_capabilities).map(([capability, enabled]) => (
+                        <div key={capability} className={`p-4 rounded-lg border ${enabled ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                          <div className="flex items-center space-x-2 mb-2">
+                            {capability === 'contactless_fingerprint' && <Fingerprint className="w-5 h-5" />}
+                            {capability === 'facial_liveness' && <Eye className="w-5 h-5" />}
+                            {capability === 'passport_ocr' && <Scan className="w-5 h-5" />}
+                            {capability === 'nfc_reading' && <Nfc className="w-5 h-5" />}
+                            {capability === 'ai_analysis' && <Zap className="w-5 h-5" />}
+                            <Badge className={enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                              {enabled ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </div>
+                          <div className="text-sm font-medium capitalize">
+                            {capability.replace('_', ' ')}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
