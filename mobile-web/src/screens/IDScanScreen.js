@@ -177,6 +177,7 @@ const IDScanScreen = () => {
     try {
       // Draw video frame to canvas
       context.drawImage(video, 0, 0);
+      console.log('✅ Video frame drawn to canvas successfully');
 
       // Apply image enhancements for better OCR
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -195,20 +196,29 @@ const IDScanScreen = () => {
 
       // Put enhanced image data back to canvas
       context.putImageData(imageData, 0, 0);
+      console.log('✅ Image enhancements applied');
 
-      // Return base64 image data
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-      const base64Data = dataUrl.split(',')[1];
-      
-      if (!base64Data || base64Data.length < 100) {
-        console.error('❌ Generated image data is too small');
+      // Return base64 image data with explicit CORS error handling
+      try {
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        const base64Data = dataUrl.split(',')[1];
+        
+        if (!base64Data || base64Data.length < 100) {
+          console.error('❌ Generated image data is too small');
+          return null;
+        }
+        
+        console.log(`✅ Image captured: ${base64Data.length} characters`);
+        return base64Data;
+      } catch (corsError) {
+        console.error('❌ CORS error during toDataURL():', corsError);
+        console.error('❌ This is likely due to cross-origin canvas restrictions');
         return null;
       }
-      
-      console.log(`✅ Image captured: ${base64Data.length} characters`);
-      return base64Data;
     } catch (drawError) {
       console.error('❌ Error drawing video to canvas:', drawError);
+      console.error('❌ Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+      console.error('❌ Canvas dimensions:', canvas.width, 'x', canvas.height);
       return null;
     }
   };
