@@ -92,8 +92,9 @@ const IDScanScreen = () => {
         // Set camera active FIRST to ensure video element is rendered
         setCameraActive(true);
         
-        // Wait for React to render the video element
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Wait for React to render the video element (longer for iOS)
+        const waitTime = isIOS ? 300 : 100;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
         
         const video = videoRef.current;
         
@@ -103,7 +104,16 @@ const IDScanScreen = () => {
         
         console.log('📹 Assigning stream to video element...');
         
-        // Ensure video element is ready
+        // iOS-specific video setup
+        if (isIOS) {
+          // iOS Safari requires these attributes to be set via JavaScript
+          video.setAttribute('playsinline', 'true');
+          video.setAttribute('webkit-playsinline', 'true');
+          video.muted = true;
+          video.controls = false;
+        }
+        
+        // Assign stream
         video.srcObject = stream;
         streamRef.current = stream;
         
@@ -114,19 +124,30 @@ const IDScanScreen = () => {
           readyState: video.readyState
         });
         
-        // Force video to load and play
-        try {
-          await video.load();
-          await video.play();
-          console.log('✅ Video loaded and playing successfully');
-        } catch (playError) {
-          console.warn('⚠️ Video play failed:', playError);
-          // Try without load() call
+        // iOS-specific play handling
+        if (isIOS) {
           try {
+            // iOS requires explicit play() call
             await video.play();
-            console.log('✅ Video playing without load()');
-          } catch (playError2) {
-            console.warn('⚠️ Video play still failed, but continuing:', playError2);
+            console.log('✅ iOS video playing successfully');
+          } catch (iosPlayError) {
+            console.warn('⚠️ iOS video play failed:', iosPlayError);
+            // iOS sometimes needs a user gesture - this might be expected
+          }
+        } else {
+          // Standard video play for other devices
+          try {
+            await video.load();
+            await video.play();
+            console.log('✅ Video loaded and playing successfully');
+          } catch (playError) {
+            console.warn('⚠️ Video play failed:', playError);
+            try {
+              await video.play();
+              console.log('✅ Video playing without load()');
+            } catch (playError2) {
+              console.warn('⚠️ Video play still failed, but continuing:', playError2);
+            }
           }
         }
         
@@ -153,11 +174,12 @@ const IDScanScreen = () => {
           
           checkVideo();
           
-          // Always resolve after 5 seconds to prevent hanging
+          // Longer timeout for iOS
+          const timeout = isIOS ? 8000 : 5000;
           setTimeout(() => {
             console.log('⏰ Video check timeout, proceeding anyway');
             resolve();
-          }, 5000);
+          }, timeout);
         });
       } else {
         throw new Error('Video element not available');
