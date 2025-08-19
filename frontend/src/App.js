@@ -329,31 +329,33 @@ function App() {
       }));
 
       if (response.data.success) {
-        // Auto-fill form data from passport
+        // Extract personal information from passport
+        const personalInfo = response.data.personal_information;
         const passportData = response.data.passport_data;
-        if (passportData) {
+        
+        if (personalInfo) {
+          // Store extracted personal information
+          setExtractedPersonalInfo(personalInfo);
+          
+          // Auto-fill form with extracted data
           setKycData(prev => ({
             ...prev,
-            first_name: passportData.given_names || prev.first_name,
-            last_name: passportData.surname || prev.last_name,
-            document_number: passportData.passport_number || prev.document_number,
-            nationality: passportData.nationality || prev.nationality,
-            date_of_birth: passportData.birth_date ? 
-              `20${passportData.birth_date.substring(0,2)}-${passportData.birth_date.substring(2,4)}-${passportData.birth_date.substring(4,6)}` : 
-              prev.date_of_birth
+            first_name: personalInfo.first_name || prev.first_name,
+            last_name: personalInfo.last_name || prev.last_name,
+            date_of_birth: personalInfo.date_of_birth || prev.date_of_birth,
+            document_number: personalInfo.document_number || prev.document_number,
+            nationality: personalInfo.nationality || prev.nationality,
+            country_of_issue: personalInfo.country_of_issue || prev.country_of_issue,
+            sex: personalInfo.sex || prev.sex,
+            expiry_date: personalInfo.expiry_date || prev.expiry_date
           }));
-        }
-        
-        // ID OCR is mandatory - move to next step (NFC or completion)
-        const validation = await validateWorkflow();
-        if (validation && validation.can_proceed) {
-          // Check if NFC is enabled and not completed
-          const nfcEnabled = biometricConfig?.config?.nfc_reading?.enabled;
-          if (nfcEnabled && !mobileCaptures.nfc_read) {
-            setActiveStep(4); // NFC step
-          } else {
-            setActiveStep(5); // Completion
-          }
+          
+          // Move to personal information verification step
+          setActiveStep(3);
+        } else {
+          // Fallback to manual entry if extraction failed
+          alert("Could not extract personal information. Please enter manually.");
+          setActiveStep(3);
         }
       }
 
@@ -364,6 +366,43 @@ function App() {
       setLoading(false);
       setCurrentCapture(null);
       stopCamera();
+    }
+  };
+
+  const verifyPersonalInformation = async () => {
+    setLoading(true);
+    
+    try {
+      const response = await axios.post(`${API}/mobile/personal-info/verify`, {
+        user_id: kycData.user_id,
+        extracted_info: extractedPersonalInfo || {},
+        user_verified_info: kycData,
+        verification_notes: verificationNotes
+      });
+
+      if (response.data.success) {
+        setPersonalInfoVerified(true);
+        
+        // Move to optional biometrics or completion based on configuration
+        const hasOptionalBiometrics = biometricConfig?.optional_features?.length > 0;
+        if (hasOptionalBiometrics) {
+          setActiveStep(4); // Optional biometrics
+        } else {
+          // Check if NFC is enabled
+          const nfcEnabled = biometricConfig?.config?.nfc_reading?.enabled;
+          if (nfcEnabled) {
+            setActiveStep(5); // NFC step
+          } else {
+            setActiveStep(6); // Completion
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error("Personal info verification error:", error);
+      alert(`Personal information verification failed: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
