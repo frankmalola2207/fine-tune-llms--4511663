@@ -101,3 +101,50 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Debug and fix the frontend error `TypeError: bioMetricsApi.testIDScan is not a function` which occurred during the test of customer data capture from the laptop camera."
+
+backend:
+  - task: "ID Document Scanning API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Backend API endpoint /api/mobile/passport/scan exists and is functional"
+
+frontend:
+  - task: "ID Capture via Laptop Camera"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Frontend error: TypeError: bioMetricsApi.testIDScan is not a function - Missing test function for ID scanning functionality"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Fix missing testIDScan function in frontend"
+    - "Implement laptop camera ID capture testing"
+  stuck_tasks:
+    - "ID Capture via Laptop Camera"
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "main"
+      message: "Investigating frontend error. No bioMetricsApi object or testIDScan function found in frontend code. This appears to be a missing testing utility function."
