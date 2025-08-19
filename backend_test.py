@@ -618,9 +618,9 @@ class MobileTechnologiesAPITester:
         return success, response
 
     def run_complete_mobile_workflow_test(self):
-        """Run complete Mobile-Technologies workflow test"""
+        """Run complete Mobile-Technologies workflow test with laptop camera functionality"""
         print("\n" + "="*80)
-        print("🚀 STARTING MOBILE-TECHNOLOGIES ENHANCED eKYC WORKFLOW TEST")
+        print("🚀 STARTING MOBILE-TECHNOLOGIES ENHANCED eKYC WORKFLOW TEST WITH LAPTOP CAMERA")
         print("="*80)
         
         # Step 1: API Version Check
@@ -650,7 +650,7 @@ class MobileTechnologiesAPITester:
         if not workflow_validation_success:
             print("❌ Workflow validation tests failed. Continuing with other tests...")
             
-        # Step 4: Mobile Dashboard
+        # Step 4: Mobile Dashboard (Initial Check)
         print("\n📋 STEP 4: Mobile Dashboard Connectivity")
         dashboard_success, _ = self.test_mobile_dashboard()
         if not dashboard_success:
@@ -662,8 +662,22 @@ class MobileTechnologiesAPITester:
         if not kyc_success:
             print("❌ Enhanced KYC initiation failed. Continuing with other tests...")
             
-        # Step 6: Enhanced Mobile Biometric Captures with Personal Information
-        print("\n📋 STEP 6: Enhanced Mobile Biometric Capture Testing")
+        # Step 6: LAPTOP CAMERA FUNCTIONALITY TESTING (NEW)
+        print("\n📋 STEP 6: Laptop Camera ID Capture Testing")
+        print("   Testing enhanced laptop camera functionality...")
+        
+        # Test new laptop camera test endpoint
+        laptop_test_success, _ = self.test_laptop_camera_test_endpoint()
+        time.sleep(3)
+        
+        # Test enhanced passport scan with laptop camera
+        laptop_passport_success, _ = self.test_enhanced_passport_scan_laptop_camera()
+        time.sleep(3)
+        
+        laptop_camera_success = laptop_test_success and laptop_passport_success
+        
+        # Step 7: Enhanced Mobile Biometric Captures with Personal Information
+        print("\n📋 STEP 7: Enhanced Mobile Biometric Capture Testing")
         print("   Testing all mobile biometric endpoints with personal information extraction...")
         
         # Contactless Fingerprint
@@ -692,6 +706,11 @@ class MobileTechnologiesAPITester:
         time.sleep(2)
         
         mobile_biometric_success = fingerprint_success and liveness_success and passport_success and nfc_success and personal_info_success
+        
+        # Step 8: Dashboard Laptop Tracking Verification
+        print("\n📋 STEP 8: Dashboard Laptop Tracking Verification")
+        dashboard_laptop_success, _ = self.test_dashboard_laptop_tracking()
+        time.sleep(2)
         
         # Final Results
         print("\n" + "="*80)
