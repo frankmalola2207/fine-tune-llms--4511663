@@ -134,17 +134,11 @@ function App() {
   };
 
   const initiateKYC = async () => {
-    if (!kycData.first_name || !kycData.last_name || !kycData.date_of_birth) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
     setLoading(true);
     try {
       await axios.post(`${API}/kyc/initiate`, kycData);
-      // Skip biometric step if no optional biometrics are enabled, go directly to mandatory ID OCR
-      const hasOptionalBiometrics = biometricConfig?.optional_features?.length > 0;
-      setActiveStep(hasOptionalBiometrics ? 2 : 3); // Step 3 is ID OCR (mandatory)
+      // Start with ID scan (mandatory step)
+      setActiveStep(2); // Go directly to ID scan
     } catch (error) {
       console.error("KYC initiation error:", error);
       alert("Failed to initiate KYC process");
