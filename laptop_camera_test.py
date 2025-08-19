@@ -9,7 +9,7 @@ import base64
 
 def test_laptop_camera_functionality():
     """Test laptop camera specific functionality"""
-    base_url = "https://agentic-kyc.preview.emergentagent.com"
+    base_url = "https://quickid.preview.emergentagent.com"
     api_url = f"{base_url}/api"
     
     # Sample base64 image data for testing

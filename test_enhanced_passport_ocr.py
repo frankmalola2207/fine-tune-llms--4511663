@@ -7,7 +7,7 @@ import time
 def test_enhanced_passport_ocr():
     """Test the enhanced passport OCR with personal information extraction"""
     
-    base_url = "https://agentic-kyc.preview.emergentagent.com"
+    base_url = "https://quickid.preview.emergentagent.com"
     api_url = f"{base_url}/api"
     
     # Sample test data from the review request
@@ -149,7 +149,7 @@ def test_enhanced_passport_ocr():
 def test_personal_info_verification():
     """Test the personal information verification endpoint"""
     
-    base_url = "https://agentic-kyc.preview.emergentagent.com"
+    base_url = "https://quickid.preview.emergentagent.com"
     api_url = f"{base_url}/api"
     
     # Sample extracted and verified info
