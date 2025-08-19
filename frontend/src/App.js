@@ -475,23 +475,27 @@ function App() {
   // Get step configuration based on available features
   const getStepConfig = () => {
     const hasOptionalBiometrics = shouldShowOptionalBiometrics();
+    const nfcEnabled = biometricConfig?.config?.nfc_reading?.enabled;
+    
+    const steps = [
+      { step: 1, label: "Start Process", icon: Users },
+      { step: 2, label: "ID Scan (Required)", icon: FileText },
+      { step: 3, label: "Verify Info", icon: CheckCircle }
+    ];
     
     if (hasOptionalBiometrics) {
-      return [
-        { step: 1, label: "Personal Info", icon: Users },
-        { step: 2, label: "Biometrics (Optional)", icon: Smartphone },
-        { step: 3, label: "ID Scan (Required)", icon: FileText },
-        { step: 4, label: "NFC Verification", icon: Nfc },
-        { step: 5, label: "Complete", icon: Award }
-      ];
-    } else {
-      return [
-        { step: 1, label: "Personal Info", icon: Users },
-        { step: 3, label: "ID Scan (Required)", icon: FileText },
-        { step: 4, label: "NFC Verification", icon: Nfc },
-        { step: 5, label: "Complete", icon: Award }
-      ];
+      steps.push({ step: 4, label: "Biometrics (Optional)", icon: Smartphone });
     }
+    
+    if (nfcEnabled) {
+      const nfcStep = hasOptionalBiometrics ? 5 : 4;
+      steps.push({ step: nfcStep, label: "NFC Verification", icon: Nfc });
+    }
+    
+    const finalStep = steps.length + 1;
+    steps.push({ step: finalStep, label: "Complete", icon: Award });
+    
+    return steps;
   };
 
   return (
