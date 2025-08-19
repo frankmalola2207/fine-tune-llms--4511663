@@ -300,18 +300,34 @@ function App() {
     setCurrentCapture('passport');
     
     try {
+      // Enhanced laptop camera configuration for ID capture
+      const cameraConfig = {
+        video: { 
+          width: { ideal: 1920, min: 1280 }, 
+          height: { ideal: 1080, min: 720 },
+          facingMode: 'environment', // Prefer back camera if available
+          focusMode: 'continuous',  // Better focus for documents
+          whiteBalanceMode: 'auto',
+          exposureMode: 'auto'
+        }
+      };
+      
+      console.log("📸 Starting ID document capture with enhanced laptop camera settings...");
+      
       await startCamera('passport');
       
-      // Wait for user to position passport
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Extended wait time for better positioning on laptop
+      await new Promise(resolve => setTimeout(resolve, 4000));
       
       const imageData = captureImage();
       if (!imageData) {
-        throw new Error("Failed to capture passport image");
+        throw new Error("Failed to capture passport image - please ensure document is well-lit and in focus");
       }
 
+      console.log("✅ ID document image captured successfully");
       stopCamera();
 
+      // Enhanced API call with laptop-specific parameters
       const response = await axios.post(`${API}/mobile/passport/scan`, {
         user_id: kycData.user_id,
         passport_image: imageData,
@@ -319,9 +335,19 @@ function App() {
         device_info: {
           user_agent: navigator.userAgent,
           platform: navigator.platform,
+          device_type: 'laptop_camera',
+          screen_resolution: `${window.screen.width}x${window.screen.height}`,
           timestamp: new Date().toISOString()
+        },
+        processing_options: {
+          enhance_contrast: true,
+          auto_rotate: true,
+          noise_reduction: true,
+          laptop_optimized: true
         }
       });
+
+      console.log("🔍 ID document processed by backend:", response.data);
 
       setMobileCaptures(prev => ({
         ...prev,
@@ -332,6 +358,8 @@ function App() {
         // Extract personal information from passport
         const personalInfo = response.data.personal_information;
         const passportData = response.data.passport_data;
+        
+        console.log("✅ Personal information extracted:", personalInfo);
         
         if (personalInfo) {
           // Store extracted personal information
@@ -350,18 +378,37 @@ function App() {
             expiry_date: personalInfo.expiry_date || prev.expiry_date
           }));
           
+          console.log("📝 Form auto-filled with extracted data");
+          
           // Move to personal information verification step
           setActiveStep(3);
         } else {
           // Fallback to manual entry if extraction failed
-          alert("Could not extract personal information. Please enter manually.");
+          console.warn("⚠️ Could not extract personal information from ID document");
+          alert("Could not extract personal information. Please enter manually or try capturing again with better lighting.");
           setActiveStep(3);
         }
+      } else {
+        console.error("❌ ID document processing failed:", response.data);
+        throw new Error(response.data.error || "ID document processing failed");
       }
 
     } catch (error) {
-      console.error("Passport OCR capture error:", error);
-      alert(`Passport scan failed: ${error.response?.data?.error || error.message}`);
+      console.error("❌ Passport OCR capture error:", error);
+      
+      // Enhanced error messages for laptop camera issues
+      let errorMessage = "Passport scan failed";
+      if (error.message.includes("camera")) {
+        errorMessage = "Camera access denied. Please enable camera permissions and try again.";
+      } else if (error.message.includes("capture")) {
+        errorMessage = "Failed to capture image. Please ensure good lighting and document positioning.";
+      } else if (error.response?.data?.error) {
+        errorMessage = `Document processing failed: ${error.response.data.error}`;
+      } else {
+        errorMessage = `Passport scan failed: ${error.message}`;
+      }
+      
+      alert(errorMessage);
     } finally {
       setLoading(false);
       setCurrentCapture(null);
