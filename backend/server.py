@@ -1330,12 +1330,15 @@ async def scan_mobile_passport(request: PassportScanRequest):
                 "analysis": ai_response
             }
         
-        # Store processing results
+        # Store processing results with device type information
         processing_time = (datetime.now() - start_time).total_seconds()
+        
+        # Determine capture type based on device
+        capture_type = f"{device_type}_passport_ocr_with_personal_info" if device_type == 'laptop_camera' else "mobile_passport_ocr_with_personal_info"
         
         biometric_data = BiometricData(
             user_id=request.user_id,
-            capture_type="mobile_passport_ocr_with_personal_info",
+            capture_type=capture_type,
             quality_score=ocr_result['confidence'],
             confidence_score=ai_analysis.get('extraction_accuracy', ocr_result['confidence']),
             processing_time=processing_time,
