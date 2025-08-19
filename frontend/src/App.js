@@ -461,6 +461,154 @@ function App() {
     }
   };
 
+  // Testing API for biometric functions - exposed globally for testing
+  const bioMetricsApi = {
+    testIDScan: async () => {
+      try {
+        console.log("🧪 Starting ID scan test...");
+        
+        // Ensure we're on the right step for ID scanning
+        if (activeStep < 2) {
+          setActiveStep(2);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for state update
+        }
+        
+        // Test the ID scanning functionality
+        const result = await capturePassportOCR();
+        
+        console.log("✅ ID scan test completed successfully", result);
+        return {
+          success: true,
+          message: "ID scan test completed successfully",
+          result: result
+        };
+      } catch (error) {
+        console.error("❌ ID scan test failed:", error);
+        return {
+          success: false,
+          message: `ID scan test failed: ${error.message}`,
+          error: error
+        };
+      }
+    },
+    
+    testMobileFingerprint: async () => {
+      try {
+        console.log("🧪 Starting mobile fingerprint test...");
+        const result = await captureMobileFingerprint();
+        console.log("✅ Mobile fingerprint test completed", result);
+        return { success: true, message: "Mobile fingerprint test completed", result };
+      } catch (error) {
+        console.error("❌ Mobile fingerprint test failed:", error);
+        return { success: false, message: `Mobile fingerprint test failed: ${error.message}`, error };
+      }
+    },
+    
+    testFacialLiveness: async () => {
+      try {
+        console.log("🧪 Starting facial liveness test...");
+        const result = await captureFacialLiveness();
+        console.log("✅ Facial liveness test completed", result);
+        return { success: true, message: "Facial liveness test completed", result };
+      } catch (error) {
+        console.error("❌ Facial liveness test failed:", error);
+        return { success: false, message: `Facial liveness test failed: ${error.message}`, error };
+      }
+    },
+    
+    testNFCRead: async () => {
+      try {
+        console.log("🧪 Starting NFC read test...");
+        const result = await performNFCRead();
+        console.log("✅ NFC read test completed", result);
+        return { success: true, message: "NFC read test completed", result };
+      } catch (error) {
+        console.error("❌ NFC read test failed:", error);
+        return { success: false, message: `NFC read test failed: ${error.message}`, error };
+      }
+    },
+    
+    getCurrentStep: () => activeStep,
+    getKycData: () => kycData,
+    getBiometricConfig: () => biometricConfig,
+    getMobileCaptures: () => mobileCaptures,
+    
+    // Enhanced laptop camera ID capture with better error handling
+    testLaptopIDCapture: async () => {
+      try {
+        console.log("💻 Starting laptop camera ID capture test...");
+        
+        // Check if camera is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Camera not available on this device");
+        }
+        
+        // Ensure user has a user_id
+        if (!kycData.user_id) {
+          setKycData(prev => ({
+            ...prev,
+            user_id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          }));
+          await new Promise(resolve => setTimeout(resolve, 500)); // Wait for state update
+        }
+        
+        // Set to ID scan step if not already there
+        if (activeStep !== 2) {
+          setActiveStep(2);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for state update
+        }
+        
+        console.log("📸 Requesting camera access for ID capture...");
+        
+        // Test camera access first
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              width: { ideal: 1280 }, 
+              height: { ideal: 720 },
+              facingMode: 'environment' 
+            } 
+          });
+          
+          console.log("✅ Camera access granted");
+          
+          // Stop the test stream
+          stream.getTracks().forEach(track => track.stop());
+          
+          // Now call the actual ID capture function
+          const result = await capturePassportOCR();
+          
+          console.log("✅ Laptop ID capture test completed successfully");
+          return {
+            success: true,
+            message: "Laptop camera ID capture test completed successfully",
+            result: result,
+            timestamp: new Date().toISOString()
+          };
+          
+        } catch (cameraError) {
+          console.error("🚫 Camera access denied:", cameraError);
+          throw new Error(`Camera access denied: ${cameraError.message}`);
+        }
+        
+      } catch (error) {
+        console.error("❌ Laptop ID capture test failed:", error);
+        return {
+          success: false,
+          message: `Laptop ID capture test failed: ${error.message}`,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        };
+      }
+    }
+  };
+  
+  // Expose bioMetricsApi globally for testing
+  React.useEffect(() => {
+    window.bioMetricsApi = bioMetricsApi;
+    console.log("🔧 bioMetricsApi exposed globally for testing");
+  }, [activeStep, kycData, biometricConfig, mobileCaptures]);
+
   const getStatusIcon = (status) => {
     switch (status) {
       case "success": return <CheckCircle className="w-5 h-5 text-green-500" />;
