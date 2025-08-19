@@ -243,18 +243,22 @@ function App() {
       } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
         errorMessage = "Camera is already in use by another application. Please close other apps and try again.";
       } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
-        errorMessage = "Camera doesn't support the required settings. Trying with basic settings...";
+        console.warn("⚠️ Camera constraints not supported, trying with basic settings...");
         
         // Fallback to basic camera settings
         try {
+          console.log("🔄 Attempting fallback to basic camera settings...");
           const basicStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480 }
+            video: { 
+              width: { ideal: 1280, min: 640 }, 
+              height: { ideal: 720, min: 480 }
+            }
           });
           
           if (videoRef.current) {
             videoRef.current.srcObject = basicStream;
             setCameraActive(true);
-            console.log("📹 Camera started with basic settings");
+            console.log("✅ Camera started with basic settings");
             return;
           }
         } catch (fallbackError) {
