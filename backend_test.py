@@ -379,22 +379,40 @@ class MobileTechnologiesAPITester:
             print("❌ API version check failed. Stopping tests.")
             return False
             
-        # Step 2: Mobile Dashboard
-        print("\n📋 STEP 2: Mobile Dashboard Connectivity")
+        # Step 2: Configuration API Testing
+        print("\n📋 STEP 2: Biometric Configuration API Testing")
+        config_get_success, _ = self.test_biometric_config_get()
+        config_update_success, _ = self.test_biometric_config_update()
+        config_protection_success, _ = self.test_biometric_config_mandatory_protection()
+        
+        config_success = config_get_success and config_update_success and config_protection_success
+        if not config_success:
+            print("❌ Configuration API tests failed. Continuing with other tests...")
+            
+        # Step 3: Workflow Validation Testing
+        print("\n📋 STEP 3: Workflow Validation API Testing")
+        workflow_mandatory_success, _ = self.test_workflow_validation_mandatory_only()
+        workflow_optional_success, _ = self.test_workflow_validation_with_optional()
+        workflow_incomplete_success, _ = self.test_workflow_validation_incomplete()
+        
+        workflow_validation_success = workflow_mandatory_success and workflow_optional_success and workflow_incomplete_success
+        if not workflow_validation_success:
+            print("❌ Workflow validation tests failed. Continuing with other tests...")
+            
+        # Step 4: Mobile Dashboard
+        print("\n📋 STEP 4: Mobile Dashboard Connectivity")
         dashboard_success, _ = self.test_mobile_dashboard()
         if not dashboard_success:
-            print("❌ Mobile dashboard failed. Stopping tests.")
-            return False
+            print("❌ Mobile dashboard failed. Continuing with other tests...")
             
-        # Step 3: Enhanced KYC Initiation
-        print("\n📋 STEP 3: Enhanced KYC Initiation")
+        # Step 5: Enhanced KYC Initiation
+        print("\n📋 STEP 5: Enhanced KYC Initiation")
         kyc_success, _ = self.test_enhanced_kyc_initiation()
         if not kyc_success:
-            print("❌ Enhanced KYC initiation failed. Stopping tests.")
-            return False
+            print("❌ Enhanced KYC initiation failed. Continuing with other tests...")
             
-        # Step 4: Mobile Biometric Captures
-        print("\n📋 STEP 4: Mobile Biometric Capture Testing")
+        # Step 6: Mobile Biometric Captures
+        print("\n📋 STEP 6: Mobile Biometric Capture Testing")
         print("   Testing all mobile biometric endpoints...")
         
         # Contactless Fingerprint
@@ -417,11 +435,17 @@ class MobileTechnologiesAPITester:
         
         # Final Results
         print("\n" + "="*80)
-        print("📊 MOBILE-TECHNOLOGIES WORKFLOW TEST RESULTS")
+        print("📊 MOBILE-TECHNOLOGIES ENHANCED WORKFLOW TEST RESULTS")
         print("="*80)
         
         workflow_steps = [
             ("API Version & Capabilities", version_success),
+            ("Biometric Configuration GET", config_get_success),
+            ("Biometric Configuration UPDATE", config_update_success),
+            ("Mandatory Feature Protection", config_protection_success),
+            ("Workflow Validation - Mandatory Only", workflow_mandatory_success),
+            ("Workflow Validation - With Optional", workflow_optional_success),
+            ("Workflow Validation - Incomplete", workflow_incomplete_success),
             ("Mobile Dashboard", dashboard_success), 
             ("Enhanced KYC Initiation", kyc_success),
             ("Mobile Fingerprint Capture", fingerprint_success),
@@ -439,19 +463,35 @@ class MobileTechnologiesAPITester:
         print(f"\n📈 Overall Tests: {self.tests_passed}/{self.tests_run} passed")
         print(f"🎯 Workflow Status: {'✅ COMPLETE SUCCESS' if overall_success else '❌ PARTIAL FAILURE'}")
         
+        # Priority test results
+        priority_tests = [
+            ("Configuration API", config_success),
+            ("Workflow Validation API", workflow_validation_success),
+            ("Enhanced Backend API", version_success),
+            ("Mobile Biometric Endpoints", mobile_biometric_success)
+        ]
+        
+        print(f"\n🎯 PRIORITY TEST RESULTS:")
+        for test_name, test_success in priority_tests:
+            status = "✅ PASSED" if test_success else "❌ FAILED"
+            print(f"   {test_name}: {status}")
+        
         if overall_success:
             print("\n🎉 All Mobile-Technologies enhanced eKYC workflow tests completed successfully!")
             print("   ✓ Backend APIs are working with version 2.0.0")
+            print("   ✓ Biometric configuration system working")
+            print("   ✓ Workflow validation API functional")
+            print("   ✓ Mandatory vs optional feature enforcement working")
             print("   ✓ Mobile biometric capabilities confirmed") 
             print("   ✓ AI integration is functional")
             print("   ✓ Complete mobile eKYC workflow operational")
             print("   ✓ Contactless fingerprint capture working")
             print("   ✓ Facial liveness detection working")
-            print("   ✓ ICAO passport OCR working")
+            print("   ✓ ICAO passport OCR working (mandatory)")
             print("   ✓ NFC chip reading simulation working")
         else:
             print("\n⚠️  Some tests failed. Check the detailed logs above.")
-            print("   Issues found in mobile biometric capabilities.")
+            print("   Issues found in enhanced configuration or workflow validation.")
             
         return overall_success
 
