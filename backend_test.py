@@ -6,7 +6,7 @@ import time
 import base64
 
 class MobileTechnologiesAPITester:
-    def __init__(self, base_url="https://9a8287fd-82ea-4aa7-8674-59d0430c9f32.preview.emergentagent.com"):
+    def __init__(self, base_url="https://agentic-kyc.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0

@@ -7,7 +7,7 @@ import time
 def test_enhanced_backend_features():
     """Test all enhanced backend features mentioned in the review request"""
     
-    base_url = "https://9a8287fd-82ea-4aa7-8674-59d0430c9f32.preview.emergentagent.com"
+    base_url = "https://agentic-kyc.preview.emergentagent.com"
     api_url = f"{base_url}/api"
     
     print("🔍 TESTING ENHANCED BACKEND FEATURES")
