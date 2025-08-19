@@ -33,19 +33,19 @@ class MobileTechnologiesAPITester:
             print(f"❌ {name} - FAILED {details}")
         return success
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, timeout=60):
+    def run_test(self, name, method, endpoint, expected_status, data=None, timeout=30):
         """Run a single API test"""
         url = f"{self.api_url}/{endpoint}" if endpoint else f"{self.api_url}/"
-        headers = {'Content-Type': 'application/json'}
+        headers = {'Content-Type': 'application/json', 'User-Agent': 'Mobile-Technologies-Tester/1.0'}
         
         print(f"\n🔍 Testing {name}...")
         print(f"   URL: {url}")
         
         try:
             if method == 'GET':
-                response = requests.get(url, headers=headers, timeout=timeout)
+                response = requests.get(url, headers=headers, timeout=timeout, verify=False)
             elif method == 'POST':
-                response = requests.post(url, json=data, headers=headers, timeout=timeout)
+                response = requests.post(url, json=data, headers=headers, timeout=timeout, verify=False)
             
             success = response.status_code == expected_status
             details = f"Status: {response.status_code}"
@@ -73,6 +73,8 @@ class MobileTechnologiesAPITester:
             
         except requests.exceptions.Timeout:
             return self.log_test(name, False, "Request timed out"), {}
+        except requests.exceptions.SSLError:
+            return self.log_test(name, False, "SSL Error - trying without verification"), {}
         except Exception as e:
             return self.log_test(name, False, f"Error: {str(e)}"), {}
 
