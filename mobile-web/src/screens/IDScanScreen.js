@@ -62,20 +62,42 @@ const IDScanScreen = () => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
-        setCameraActive(true);
-        console.log('✅ Camera started successfully');
+        
+        // Wait for video to be ready
+        videoRef.current.onloadedmetadata = () => {
+          console.log('✅ Video metadata loaded');
+          setCameraActive(true);
+        };
+        
+        console.log('✅ Camera stream assigned to video element');
       }
     } catch (error) {
       console.error('❌ Camera access error:', error);
       
-      let errorMessage = 'Camera access denied. Please enable camera permissions.';
+      let errorMessage = 'Camera access denied. Please enable camera permissions and try again.';
       
-      if (error.name === 'NotFoundError') {
-        errorMessage = 'No camera found. Please ensure your device has a camera.';
+      if (error.name === 'NotFoundError' || error.message.includes('not supported')) {
+        errorMessage = 'No camera found or camera API not supported on this device.';
       } else if (error.name === 'NotAllowedError') {
-        errorMessage = 'Camera permission denied. Please allow camera access and try again.';
+        errorMessage = 'Camera permission denied. Please allow camera access in your browser settings and refresh the page.';
       } else if (error.name === 'NotReadableError') {
-        errorMessage = 'Camera is already in use by another application.';
+        errorMessage = 'Camera is already in use by another application. Please close other apps using the camera.';
+      } else if (error.name === 'OverconstrainedError') {
+        errorMessage = 'Camera constraints not supported. Trying basic camera access...';
+        // Try again with basic constraints
+        try {
+          const basicStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          if (videoRef.current) {
+            videoRef.current.srcObject = basicStream;
+            streamRef.current = basicStream;
+            setCameraActive(true);
+            console.log('✅ Camera started with basic constraints');
+            return;
+          }
+        } catch (basicError) {
+          console.error('❌ Basic camera access also failed:', basicError);
+          errorMessage = 'Camera access failed. Please check your device permissions.';
+        }
       }
       
       setCameraError(errorMessage);
