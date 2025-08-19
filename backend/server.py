@@ -1199,9 +1199,77 @@ async def get_mobile_dashboard():
         logging.error(f"Mobile dashboard error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Dashboard data fetch failed: {str(e)}")
 
-# Legacy KYC endpoints (enhanced)
-@api_router.post("/kyc/initiate")
-async def initiate_kyc(request: dict):
+@api_router.post("/kyc/workflow/validate")
+async def validate_kyc_workflow(request: dict):
+    """Validate KYC workflow completion based on configuration"""
+    try:
+        user_id = request.get("user_id")
+        completed_captures = request.get("completed_captures", [])
+        
+        if not user_id:
+            return {
+                "success": False,
+                "error": "User ID is required"
+            }
+        
+        # Check mandatory features
+        mandatory_features = [k for k, v in BIOMETRIC_CONFIG.items() if v["mandatory"] and v["enabled"]]
+        missing_mandatory = []
+        
+        for feature in mandatory_features:
+            feature_completed = False
+            
+            # Map feature names to capture types
+            if feature == "passport_ocr" and "passport_ocr" in completed_captures:
+                feature_completed = True
+            elif feature == "contactless_fingerprint" and "fingerprint" in completed_captures:
+                feature_completed = True
+            elif feature == "facial_liveness" and "facial_liveness" in completed_captures:
+                feature_completed = True
+            elif feature == "facial_matching" and "facial_matching" in completed_captures:
+                feature_completed = True
+            elif feature == "nfc_reading" and "nfc_read" in completed_captures:
+                feature_completed = True
+                
+            if not feature_completed:
+                missing_mandatory.append(feature)
+        
+        # Get optional features that are enabled
+        optional_features = [k for k, v in BIOMETRIC_CONFIG.items() if v["enabled"] and not v["mandatory"]]
+        completed_optional = []
+        
+        for feature in optional_features:
+            if feature == "contactless_fingerprint" and "fingerprint" in completed_captures:
+                completed_optional.append(feature)
+            elif feature == "facial_liveness" and "facial_liveness" in completed_captures:
+                completed_optional.append(feature)
+            elif feature == "facial_matching" and "facial_matching" in completed_captures:
+                completed_optional.append(feature)
+            elif feature == "nfc_reading" and "nfc_read" in completed_captures:
+                completed_optional.append(feature)
+        
+        # Workflow is valid if all mandatory features are completed
+        workflow_valid = len(missing_mandatory) == 0
+        
+        return {
+            "success": True,
+            "workflow_valid": workflow_valid,
+            "mandatory_completed": len(mandatory_features) - len(missing_mandatory),
+            "mandatory_total": len(mandatory_features),
+            "optional_completed": len(completed_optional),
+            "optional_available": len(optional_features),
+            "missing_mandatory": missing_mandatory,
+            "completed_optional": completed_optional,
+            "can_proceed": workflow_valid,
+            "config": BIOMETRIC_CONFIG
+        }
+        
+    except Exception as e:
+        logging.error(f"Workflow validation error: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Workflow validation failed: {str(e)}"
+        }
     """Enhanced KYC initiation with mobile capabilities"""
     try:
         # Add mobile capabilities info
