@@ -74,6 +74,7 @@ class PassportScanRequest(BaseModel):
     passport_image: str  # base64 encoded
     extract_mrz: bool = True
     device_info: Optional[Dict[str, str]] = None
+    processing_options: Optional[Dict[str, Any]] = None  # Enhanced processing options for laptop cameras
 
 class PersonalInfoVerificationRequest(BaseModel):
     user_id: str
