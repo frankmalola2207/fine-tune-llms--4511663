@@ -1069,7 +1069,7 @@ function App() {
                     className="flex items-center space-x-2"
                   >
                     <span>Skip Optional Biometrics</span>
-                    <Badge className="bg-red-100 text-red-800 ml-2">Go to Required ID Scan</Badge>
+                    <Badge className="bg-red-100 text-red-800 ml-2">Continue to NFC/Completion</Badge>
                   </Button>
                   
                   {Object.keys(mobileCaptures).length > 0 && (
@@ -1077,7 +1077,7 @@ function App() {
                       onClick={checkOptionalBiometricsComplete}
                       className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
                     >
-                      Continue to ID Verification
+                      Continue to NFC Verification
                     </Button>
                   )}
                 </div>
