@@ -1262,6 +1262,9 @@ function App() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Analytics Dashboard */}
+          <TabsContent value="dashboard">
             {dashboard && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="bg-white/70 backdrop-blur-sm border-white/20">
