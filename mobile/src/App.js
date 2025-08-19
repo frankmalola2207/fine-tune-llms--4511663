@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
-import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import LinearGradient from 'react-native-linear-gradient';
+
+// Context Provider
+import {AppProvider} from './contexts/AppContext';
 
 // Screens
 import WelcomeScreen from './screens/WelcomeScreen';
@@ -26,23 +28,30 @@ import CompletionScreen from './screens/CompletionScreen';
 import ConfigurationScreen from './screens/ConfigurationScreen';
 
 // Utils
-import {requestCameraPermission} from './utils/permissions';
+import {requestAllPermissions} from './utils/permissions';
 import {initializeApp} from './utils/appInit';
 
 const Stack = createStackNavigator();
 
-const App = () => {
+const AppContent = () => {
   useEffect(() => {
     // Initialize app and request permissions
     const setupApp = async () => {
       try {
+        console.log('🚀 Starting Mobile-Technologies App...');
+        
         await initializeApp();
-        await requestCameraPermission();
+        console.log('✅ App initialized successfully');
+        
+        await requestAllPermissions();
+        console.log('✅ Permissions requested successfully');
+        
       } catch (error) {
-        console.error('App initialization error:', error);
+        console.error('❌ App initialization error:', error);
         Alert.alert(
           'Initialization Error',
           'Failed to initialize the app. Please restart and try again.',
+          [{text: 'OK'}]
         );
       }
     };
@@ -51,6 +60,93 @@ const App = () => {
   }, []);
 
   return (
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName="Welcome"
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: '#1e40af',
+            elevation: 0,
+            shadowOpacity: 0,
+          },
+          headerTintColor: '#ffffff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            fontSize: 18,
+          },
+          headerBackground: () => (
+            <LinearGradient
+              colors={['#1e40af', '#3730a3']}
+              style={StyleSheet.absoluteFill}
+              start={{x: 0, y: 0}}
+              end={{x: 1, y: 0}}
+            />
+          ),
+        }}>
+        <Stack.Screen
+          name="Welcome"
+          component={WelcomeScreen}
+          options={{
+            title: 'Mobile-Technologies',
+            headerLeft: null,
+          }}
+        />
+        <Stack.Screen
+          name="IDScan"
+          component={IDScanScreen}
+          options={{
+            title: 'ID Document Scan',
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="PersonalInfo"
+          component={PersonalInfoScreen}
+          options={{
+            title: 'Verify Information',
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="FacialBiometrics"
+          component={FacialBiometricsScreen}
+          options={{
+            title: 'Facial Verification',
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="OptionalBiometrics"
+          component={OptionalBiometricsScreen}
+          options={{
+            title: 'Additional Security',
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="Completion"
+          component={CompletionScreen}
+          options={{
+            title: 'Verification Complete',
+            headerLeft: null,
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="Configuration"
+          component={ConfigurationScreen}
+          options={{
+            title: 'Settings',
+            headerBackTitleVisible: false,
+          }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+};
+
+const App = () => {
+  return (
     <>
       <StatusBar
         barStyle="light-content"
@@ -58,87 +154,9 @@ const App = () => {
         translucent={false}
       />
       <SafeAreaView style={styles.container}>
-        <NavigationContainer>
-          <Stack.Navigator
-            initialRouteName="Welcome"
-            screenOptions={{
-              headerStyle: {
-                backgroundColor: '#1e40af',
-                elevation: 0,
-                shadowOpacity: 0,
-              },
-              headerTintColor: '#ffffff',
-              headerTitleStyle: {
-                fontWeight: 'bold',
-                fontSize: 18,
-              },
-              headerBackground: () => (
-                <LinearGradient
-                  colors={['#1e40af', '#3730a3']}
-                  style={StyleSheet.absoluteFill}
-                  start={{x: 0, y: 0}}
-                  end={{x: 1, y: 0}}
-                />
-              ),
-            }}>
-            <Stack.Screen
-              name="Welcome"
-              component={WelcomeScreen}
-              options={{
-                title: 'Mobile-Technologies',
-                headerLeft: null,
-              }}
-            />
-            <Stack.Screen
-              name="IDScan"
-              component={IDScanScreen}
-              options={{
-                title: 'ID Document Scan',
-                headerBackTitleVisible: false,
-              }}
-            />
-            <Stack.Screen
-              name="PersonalInfo"
-              component={PersonalInfoScreen}
-              options={{
-                title: 'Verify Information',
-                headerBackTitleVisible: false,
-              }}
-            />
-            <Stack.Screen
-              name="FacialBiometrics"
-              component={FacialBiometricsScreen}
-              options={{
-                title: 'Facial Verification',
-                headerBackTitleVisible: false,
-              }}
-            />
-            <Stack.Screen
-              name="OptionalBiometrics"
-              component={OptionalBiometricsScreen}
-              options={{
-                title: 'Additional Security',
-                headerBackTitleVisible: false,
-              }}
-            />
-            <Stack.Screen
-              name="Completion"
-              component={CompletionScreen}
-              options={{
-                title: 'Verification Complete',
-                headerLeft: null,
-              }}
-            />
-            <Stack.Screen
-              name="Configuration"
-              component={ConfigurationScreen}
-              options={{
-                title: 'Settings',
-                headerBackTitleVisible: false,
-              }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
+        <AppProvider>
+          <AppContent />
+        </AppProvider>
       </SafeAreaView>
     </>
   );
