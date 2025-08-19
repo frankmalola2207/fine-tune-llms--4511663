@@ -205,8 +205,6 @@ function App() {
         }
       }
       
-      const stream = await navigator.mediaDevices.getUserMedia(cameraConfig);
-      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setCameraActive(true);
