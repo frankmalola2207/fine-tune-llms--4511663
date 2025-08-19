@@ -1084,7 +1084,7 @@ async def get_mobile_dashboard():
             {"$group": {"_id": None, "avg_quality": {"$avg": "$quality_score"}}}
         ]).to_list(1)
         
-        avg_quality_score = avg_quality[0]["avg_quality"] if avg_quality else 0.0
+        avg_quality_score = avg_quality[0]["avg_quality"] if avg_quality and avg_quality[0]["avg_quality"] is not None else 0.0
         
         # Recent captures
         recent_captures = await db.biometric_data.find({}).sort("created_at", -1).limit(10).to_list(10)
