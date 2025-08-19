@@ -687,19 +687,169 @@ function App() {
               </CardContent>
             </Card>
 
-            {/* Step 1: Personal Information */}
+            {/* Step 1: Start Process */}
             {activeStep === 1 && (
               <Card className="bg-white/70 backdrop-blur-sm border-white/20">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Users className="w-5 h-5" />
-                    <span>Personal Information</span>
+                    <span>Welcome to Mobile eKYC</span>
                   </CardTitle>
                   <CardDescription>
-                    Enter your details to begin advanced mobile biometric verification
+                    Start your identity verification journey. We'll scan your ID first to automatically capture your personal information.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
+                  <div className="text-center">
+                    <div className="p-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                      <FileText className="w-16 h-16 mx-auto text-blue-600 mb-4" />
+                      <h3 className="text-xl font-semibold text-blue-800 mb-2">ID Document Scan First</h3>
+                      <p className="text-blue-700 mb-4">
+                        We'll start by scanning your passport or ID document to automatically extract your personal information.
+                        This ensures accuracy and saves you time.
+                      </p>
+                      <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                        <h4 className="font-medium mb-2">What happens next:</h4>
+                        <ul className="text-sm text-left text-gray-600 space-y-1">
+                          <li>• 📸 Scan your ID document with camera</li>
+                          <li>• 🤖 AI extracts your personal information</li>
+                          <li>• ✅ Review and verify the extracted data</li>
+                          <li>• 🔐 Optional: Additional biometric security</li>
+                          <li>• ✨ Complete your verification</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={initiateKYC}
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white h-12 text-lg"
+                  >
+                    {loading ? "Starting..." : "Start ID Scanning Process"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 2: Mandatory ID Document Scanning */}
+            {activeStep === 2 && (
+              <Card className="bg-white/70 backdrop-blur-sm border-white/20 border-red-200">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Scan className="w-5 h-5" />
+                      <span>ID Document Scan - REQUIRED</span>
+                    </div>
+                    <Badge className="bg-red-100 text-red-800">Mandatory Step</Badge>
+                  </div>
+                  <CardDescription>
+                    Scan your ID document to automatically extract personal information. This step is required by regulation.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {mobileCaptures.passport_ocr ? (
+                    <div className="space-y-4">
+                      <Alert>
+                        {getStatusIcon(mobileCaptures.passport_ocr.success ? "success" : "failed")}
+                        <AlertDescription>
+                          {mobileCaptures.passport_ocr.success 
+                            ? `✅ ID Scanned Successfully! Personal information extracted with ${(mobileCaptures.passport_ocr.ocr_confidence * 100).toFixed(1)}% confidence`
+                            : `❌ ID scan failed: ${mobileCaptures.passport_ocr.error}`
+                          }
+                        </AlertDescription>
+                      </Alert>
+                      
+                      {mobileCaptures.passport_ocr.success && extractedPersonalInfo && (
+                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                          <h4 className="font-semibold mb-2 text-green-800">✅ Personal Information Extracted:</h4>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div><strong>First Name:</strong> {extractedPersonalInfo.first_name || 'Not extracted'}</div>
+                            <div><strong>Last Name:</strong> {extractedPersonalInfo.last_name || 'Not extracted'}</div>
+                            <div><strong>Date of Birth:</strong> {extractedPersonalInfo.date_of_birth || 'Not extracted'}</div>
+                            <div><strong>Document Number:</strong> {extractedPersonalInfo.document_number || 'Not extracted'}</div>
+                            <div><strong>Nationality:</strong> {extractedPersonalInfo.nationality || 'Not extracted'}</div>
+                            <div><strong>Sex:</strong> {extractedPersonalInfo.sex || 'Not extracted'}</div>
+                          </div>
+                          <div className="mt-3">
+                            <div className="flex items-center space-x-2">
+                              <Label className="text-xs">Extraction Confidence:</Label>
+                              <Progress value={(extractedPersonalInfo.extraction_confidence || 0) * 100} className="h-2 flex-1" />
+                              <span className="text-xs font-medium">
+                                {((extractedPersonalInfo.extraction_confidence || 0) * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {mobileCaptures.passport_ocr.success ? (
+                        <Button
+                          onClick={() => setActiveStep(3)}
+                          className="w-full bg-gradient-to-r from-green-600 to-teal-600 text-white"
+                        >
+                          Continue to Verify Personal Information
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={capturePassportOCR}
+                          disabled={loading || currentCapture === 'passport'}
+                          className="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white"
+                        >
+                          {currentCapture === 'passport' ? "Scanning..." : "Retry ID Document Scan"}
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-4">
+                      <Alert>
+                        <AlertTriangle className="w-4 h-4" />
+                        <AlertDescription>
+                          <strong>REQUIRED STEP:</strong> ID document scanning is mandatory and will automatically extract your personal information.
+                        </AlertDescription>
+                      </Alert>
+                      
+                      <div className="p-8 border-2 border-dashed border-red-300 rounded-lg bg-red-50">
+                        <Scan className="w-12 h-12 mx-auto text-red-500 mb-4" />
+                        <h3 className="text-lg font-semibold text-red-800 mb-2">Required: Position ID document in camera view</h3>
+                        <p className="text-red-600 mb-4">We'll automatically extract your personal information from the document</p>
+                        <Button
+                          onClick={capturePassportOCR}
+                          disabled={loading || currentCapture === 'passport'}
+                          className="bg-gradient-to-r from-red-600 to-orange-600 text-white"
+                        >
+                          {currentCapture === 'passport' ? "Scanning..." : "📸 Scan ID Document"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 3: Personal Information Verification */}
+            {activeStep === 3 && (
+              <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <CheckCircle className="w-5 h-5" />
+                    <span>Verify Personal Information</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Review and confirm the information extracted from your ID document. Make any necessary corrections.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {extractedPersonalInfo && (
+                    <Alert>
+                      <Target className="w-4 h-4" />
+                      <AlertDescription>
+                        <strong>Auto-extracted from ID:</strong> Please review the information below and make corrections if needed.
+                        Extraction confidence: {((extractedPersonalInfo.extraction_confidence || 0) * 100).toFixed(1)}%
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="first_name">First Name *</Label>
@@ -732,6 +882,16 @@ function App() {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="sex">Sex</Label>
+                      <Input
+                        id="sex"
+                        value={kycData.sex}
+                        onChange={(e) => handleInputChange("sex", e.target.value)}
+                        placeholder="e.g. Male, Female"
+                        className="bg-white/80"
+                      />
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="nationality">Nationality</Label>
                       <Input
                         id="nationality"
@@ -741,7 +901,17 @@ function App() {
                         className="bg-white/80"
                       />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="country_of_issue">Country of Issue</Label>
+                      <Input
+                        id="country_of_issue"
+                        value={kycData.country_of_issue}
+                        onChange={(e) => handleInputChange("country_of_issue", e.target.value)}
+                        placeholder="Document issuing country"
+                        className="bg-white/80"
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-1">
                       <Label htmlFor="document_number">Document Number</Label>
                       <Input
                         id="document_number"
@@ -751,13 +921,35 @@ function App() {
                         className="bg-white/80"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="expiry_date">Expiry Date</Label>
+                      <Input
+                        id="expiry_date"
+                        type="date"
+                        value={kycData.expiry_date}
+                        onChange={(e) => handleInputChange("expiry_date", e.target.value)}
+                        className="bg-white/80"
+                      />
+                    </div>
                   </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="verification_notes">Verification Notes (Optional)</Label>
+                    <Input
+                      id="verification_notes"
+                      value={verificationNotes}
+                      onChange={(e) => setVerificationNotes(e.target.value)}
+                      placeholder="Any corrections or notes about the extracted information"
+                      className="bg-white/80"
+                    />
+                  </div>
+                  
                   <Button 
-                    onClick={initiateKYC}
-                    disabled={loading}
+                    onClick={verifyPersonalInformation}
+                    disabled={loading || !kycData.first_name || !kycData.last_name || !kycData.date_of_birth}
                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
                   >
-                    {loading ? "Initiating..." : "Start Mobile eKYC Process"}
+                    {loading ? "Verifying..." : "✅ Confirm Personal Information"}
                   </Button>
                 </CardContent>
               </Card>
