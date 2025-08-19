@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile-Technologies Test Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: linear-gradient(135deg, #1e40af, #3730a3);
+      color: white;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+    }
+    .icon {
+      font-size: 4rem;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+    .status {
+      font-size: 1.2rem;
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(16, 185, 129, 0.2);
+      border-radius: 10px;
+      border: 2px solid #10b981;
+    }
+    .link {
+      display: inline-block;
+      background: #10b981;
+      color: white;
+      padding: 15px 30px;
+      text-decoration: none;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      margin-top: 20px;
+    }
+    .info {
+      font-size: 0.9rem;
+      margin-top: 20px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📱</div>
+    <h1>Mobile-Technologies</h1>
+    <p>eKYC Platform - Connection Test</p>
+    
+    <div class="status">
+      ✅ Server is Running Successfully!
+    </div>
+    
+    <p>If you can see this page, your connection is working.</p>
+    
+    <a href="/" class="link">🚀 Launch eKYC App</a>
+    
+    <div class="info">
+      <p><strong>Test successful!</strong> Your device can access the server.</p>
+      <p>The main app should work at the root URL: <strong>/</strong></p>
+      <p>Server Time: <span id="time"></span></p>
+    </div>
+  </div>
+
+  <script>
+    // Update time every second
+    function updateTime() {
+      document.getElementById('time').textContent = new Date().toLocaleTimeString();
+    }
+    updateTime();
+    setInterval(updateTime, 1000);
+    
+    // Test camera availability
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      document.body.innerHTML += '<div style="margin-top: 20px; padding: 10px; background: rgba(16, 185, 129, 0.2); border-radius: 8px;">📹 Camera API Available - Ready for eKYC!</div>';
+    } else {
+      document.body.innerHTML += '<div style="margin-top: 20px; padding: 10px; background: rgba(239, 68, 68, 0.2); border-radius: 8px;">❌ Camera API Not Available</div>';
+    }
+  </script>
+</body>
+</html>
