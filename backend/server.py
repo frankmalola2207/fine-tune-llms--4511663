@@ -384,33 +384,6 @@ async def assess_risk(request: RiskAssessmentRequest):
         logging.error(f"Risk assessment error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Risk assessment failed: {str(e)}")
 
-@api_router.get("/kyc/dashboard")
-async def get_kyc_dashboard():
-    """Get KYC dashboard statistics"""
-    try:
-        total_requests = await db.kyc_requests.count_documents({})
-        approved = await db.kyc_requests.count_documents({"status": "approved"})
-        rejected = await db.kyc_requests.count_documents({"status": "rejected"})
-        pending = await db.kyc_requests.count_documents({"status": "pending"})
-        review_required = await db.kyc_requests.count_documents({"status": "review_required"})
-        
-        recent_requests = await db.kyc_requests.find({}).sort("created_at", -1).limit(10).to_list(10)
-        
-        return {
-            "statistics": {
-                "total_requests": total_requests,
-                "approved": approved,
-                "rejected": rejected,
-                "pending": pending,
-                "review_required": review_required,
-                "approval_rate": (approved / total_requests * 100) if total_requests > 0 else 0
-            },
-            "recent_requests": [parse_from_mongo(req) for req in recent_requests]
-        }
-    except Exception as e:
-        logging.error(f"Dashboard error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Dashboard data fetch failed: {str(e)}")
-
 # Include the router in the main app
 app.include_router(api_router)
 
