@@ -553,7 +553,8 @@ class MobileTechnologiesAPITester:
             ("Enhanced KYC Initiation", kyc_success),
             ("Mobile Fingerprint Capture", fingerprint_success),
             ("Facial Liveness Detection", liveness_success),
-            ("Passport OCR Scan", passport_success),
+            ("Enhanced Passport OCR with Personal Info", passport_success),
+            ("Personal Information Verification", personal_info_success),
             ("NFC Chip Reading", nfc_success)
         ]
         
