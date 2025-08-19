@@ -153,8 +153,8 @@ class MobileTechnologiesAPITester:
         
         return success, response
 
-    def test_passport_ocr_scan(self):
-        """Test ICAO passport OCR"""
+    def test_passport_ocr_scan_enhanced(self):
+        """Test Enhanced ICAO passport OCR with personal information extraction"""
         passport_data = {
             "user_id": self.user_id,
             "passport_image": self.sample_image_data,
@@ -162,16 +162,49 @@ class MobileTechnologiesAPITester:
             "device_info": self.device_info
         }
         
-        success, response = self.run_test("Passport OCR Scan", "POST", "mobile/passport/scan", 200, passport_data, timeout=90)
+        success, response = self.run_test("Enhanced Passport OCR with Personal Info", "POST", "mobile/passport/scan", 200, passport_data, timeout=90)
         
         if success:
             # Check response structure
             if response.get("success"):
                 print(f"   ✓ Passport OCR successful")
                 print(f"   ✓ OCR confidence: {response.get('ocr_confidence', 'N/A')}")
-                passport_info = response.get('passport_data', {})
-                if passport_info:
-                    print(f"   ✓ Extracted passport data available")
+                
+                # Check for enhanced personal information extraction
+                personal_info = response.get('personal_information', {})
+                auto_fill_data = response.get('auto_fill_data', {})
+                passport_data = response.get('passport_data', {})
+                
+                if personal_info:
+                    print(f"   ✓ Personal information extracted")
+                    print(f"   ✓ First name: {personal_info.get('first_name', 'N/A')}")
+                    print(f"   ✓ Last name: {personal_info.get('last_name', 'N/A')}")
+                    print(f"   ✓ Date of birth: {personal_info.get('date_of_birth', 'N/A')}")
+                    print(f"   ✓ Document number: {personal_info.get('document_number', 'N/A')}")
+                    print(f"   ✓ Nationality: {personal_info.get('nationality', 'N/A')}")
+                    print(f"   ✓ Sex: {personal_info.get('sex', 'N/A')}")
+                    print(f"   ✓ Extraction confidence: {personal_info.get('extraction_confidence', 'N/A')}")
+                else:
+                    print(f"   ⚠️ Personal information not extracted")
+                
+                if auto_fill_data:
+                    print(f"   ✓ Auto-fill data available for form population")
+                else:
+                    print(f"   ⚠️ Auto-fill data not available")
+                    
+                if passport_data:
+                    print(f"   ✓ MRZ passport data available")
+                else:
+                    print(f"   ⚠️ MRZ passport data not available")
+                    
+                # Check AI analysis
+                ai_analysis = response.get('ai_analysis', {})
+                if ai_analysis:
+                    print(f"   ✓ AI analysis available")
+                    print(f"   ✓ Personal info quality: {ai_analysis.get('personal_info_quality', 'N/A')}")
+                    print(f"   ✓ Auto-fill confidence: {ai_analysis.get('auto_fill_confidence', 'N/A')}")
+                else:
+                    print(f"   ⚠️ AI analysis not available")
             else:
                 print(f"   ⚠️ Passport OCR failed: {response.get('error', 'Unknown error')}")
         
