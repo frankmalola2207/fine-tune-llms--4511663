@@ -1267,23 +1267,44 @@ async def scan_mobile_passport(request: PassportScanRequest):
                 "error": "Failed to extract passport data from mobile capture"
             }
         
-        # AI analysis with focus on personal information quality
+        # Enhanced AI analysis with laptop camera considerations
+        device_type = request.device_info.get('device_type', 'mobile') if request.device_info else 'mobile'
+        processing_opts = request.processing_options or {}
+        
+        # Build device-specific analysis text
+        if device_type == 'laptop_camera':
+            device_analysis = """Special considerations for laptop camera capture:
+        - Laptop cameras typically have different lighting conditions than mobile devices
+        - Document positioning may be more stable but lighting can be challenging
+        - Higher resolution potential but may have focus issues at close range
+        - Consider recommending external lighting or document positioning"""
+        else:
+            device_analysis = """Mobile capture analysis:
+        - Mobile device capture with typical handheld variations
+        - Consider mobile-specific lighting and stability factors"""
+        
         ai_prompt = f"""
-        Analyze this mobile passport OCR result with extracted personal information:
+        Analyze this passport OCR result with extracted personal information:
+        - Device Type: {device_type}
+        - Processing Options: {json.dumps(processing_opts, indent=2)}
         - Extracted Personal Info: {json.dumps(ocr_result['personal_information'], indent=2)}
         - MRZ Data: {json.dumps(ocr_result['mrz_data'], indent=2)}
         - OCR Confidence: {ocr_result['confidence']}
         - Personal Info Quality: {ocr_result['mrz_data'].get('validation', {}).get('personal_info_quality', 'unknown')}
         - Device Info: {request.device_info}
         
+        {device_analysis}
+        
         Provide analysis on:
         1. Personal information extraction accuracy and completeness
-        2. Name parsing quality (surname, given names separation)
+        2. Name parsing quality (surname, given names separation) 
         3. Date formatting and validity (birth date, expiry date)
         4. Document authenticity and ICAO compliance
         5. Data consistency across extracted fields
         6. Recommendations for user verification of extracted data
         7. Auto-fill confidence and suggested user actions
+        8. Device-specific capture quality assessment
+        9. Suggestions for improving capture quality on this device type
         
         Respond in JSON format with:
         - personal_info_quality: high/medium/low
@@ -1292,6 +1313,8 @@ async def scan_mobile_passport(request: PassportScanRequest):
         - verification_recommendations: list of suggestions
         - data_consistency_check: validation results
         - user_review_required: boolean
+        - capture_quality_assessment: device-specific quality notes
+        - improvement_suggestions: list of device-specific tips
         """
         
         user_message = UserMessage(text=ai_prompt)
