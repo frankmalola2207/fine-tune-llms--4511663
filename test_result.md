@@ -111,11 +111,26 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: true
           agent: "main"
           comment: "Backend API endpoint /api/mobile/passport/scan exists and is functional"
+        - working: true
+          agent: "main"
+          comment: "ENHANCED: Added laptop camera support with processing_options parameter, device-specific AI analysis, improved error handling, and dedicated test endpoint /api/test/laptop-camera/id-capture."
+
+  - task: "Laptop Camera Processing Support"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Implemented laptop camera-specific processing options, enhanced AI analysis with device type considerations, updated dashboard to track laptop captures separately, and added comprehensive test endpoint."
 
 frontend:
   - task: "ID Capture via Laptop Camera"
