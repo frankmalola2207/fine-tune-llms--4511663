@@ -63,13 +63,24 @@ const IDScanScreen = () => {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         
+        // Set camera active immediately to show video element
+        setCameraActive(true);
+        
+        // Explicitly play the video to handle autoplay restrictions
+        try {
+          await videoRef.current.play();
+          console.log('✅ Video started playing successfully');
+        } catch (playError) {
+          console.warn('⚠️ Video autoplay failed, but stream is active:', playError);
+          // This is often expected due to browser autoplay policies
+        }
+        
         // Wait for video to be ready with proper event handling
         await new Promise((resolve, reject) => {
           const video = videoRef.current;
           
           const onLoadedMetadata = () => {
             console.log('✅ Video metadata loaded, dimensions:', video.videoWidth, 'x', video.videoHeight);
-            setCameraActive(true);
             
             // Clean up event listeners
             video.removeEventListener('loadedmetadata', onLoadedMetadata);
@@ -90,13 +101,12 @@ const IDScanScreen = () => {
           
           // Timeout fallback
           setTimeout(() => {
-            if (!cameraActive) {
-              console.log('⏰ Video loading timeout, setting camera active anyway');
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+              console.log('⏰ Video loading timeout but keeping camera active');
               video.removeEventListener('loadedmetadata', onLoadedMetadata);
               video.removeEventListener('error', onVideoError);
-              setCameraActive(true);
-              resolve();
             }
+            resolve();
           }, 3000);
         });
       } else {
