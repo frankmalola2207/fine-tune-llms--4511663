@@ -193,15 +193,13 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Fix missing testIDScan function in frontend"
-    - "Implement laptop camera ID capture testing"
-  stuck_tasks:
-    - "ID Capture via Laptop Camera"
+    - "Backend laptop camera functionality testing complete"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
@@ -210,3 +208,5 @@ agent_communication:
       message: "Investigating frontend error. No bioMetricsApi object or testIDScan function found in frontend code. This appears to be a missing testing utility function."
     - agent: "main"  
       message: "ISSUE RESOLVED: Added comprehensive bioMetricsApi testing object with testIDScan, testLaptopIDCapture, and other test functions. Enhanced both frontend and backend for laptop camera support with device-specific optimizations. Ready for backend testing."
+    - agent: "testing"
+      message: "BACKEND TESTING COMPLETE: All laptop camera ID capture functionality tested successfully. Key findings: 1) New test endpoint /api/test/laptop-camera/id-capture working, 2) Enhanced passport scan with laptop device_info and processing_options functional, 3) Dashboard tracks laptop scans separately, 4) Biometric config API compatible with enhanced features. All backend APIs operational. Installed missing tesseract dependency. Ready for main agent to summarize and finish."
