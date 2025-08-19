@@ -52,6 +52,8 @@ function App() {
   const [dashboard, setDashboard] = useState(null);
   const [mobileDashboard, setMobileDashboard] = useState(null);
   const [currentCapture, setCurrentCapture] = useState(null);
+  const [biometricConfig, setBiometricConfig] = useState(null);
+  const [workflowValidation, setWorkflowValidation] = useState(null);
   
   // Camera references
   const videoRef = useRef(null);
@@ -67,6 +69,7 @@ function App() {
     }));
     fetchDashboard();
     fetchMobileDashboard();
+    fetchBiometricConfig();
   }, []);
 
   const fetchDashboard = async () => {
@@ -84,6 +87,34 @@ function App() {
       setMobileDashboard(response.data);
     } catch (error) {
       console.error("Mobile dashboard fetch error:", error);
+    }
+  };
+
+  const fetchBiometricConfig = async () => {
+    try {
+      const response = await axios.get(`${API}/config/biometric`);
+      setBiometricConfig(response.data);
+    } catch (error) {
+      console.error("Biometric config fetch error:", error);
+    }
+  };
+
+  const validateWorkflow = async () => {
+    try {
+      const completedCaptures = Object.keys(mobileCaptures).filter(
+        key => mobileCaptures[key] && mobileCaptures[key].success
+      );
+      
+      const response = await axios.post(`${API}/kyc/workflow/validate`, {
+        user_id: kycData.user_id,
+        completed_captures: completedCaptures
+      });
+      
+      setWorkflowValidation(response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Workflow validation error:", error);
+      return null;
     }
   };
 
