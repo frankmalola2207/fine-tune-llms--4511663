@@ -217,6 +217,12 @@ const IDScanScreen = () => {
     try {
       setCapturing(true);
       console.log('📸 Starting capture process...');
+      console.log('🔍 Video element status:', {
+        exists: !!videoRef.current,
+        readyState: videoRef.current?.readyState,
+        videoWidth: videoRef.current?.videoWidth,
+        videoHeight: videoRef.current?.videoHeight
+      });
       
       // Check if video is ready
       if (!videoRef.current) {
@@ -230,6 +236,7 @@ const IDScanScreen = () => {
         console.log('⏳ Waiting for video to be ready...');
         await new Promise((resolve, reject) => {
           const checkReady = () => {
+            console.log('🔄 Checking video ready state:', video.readyState);
             if (video.readyState >= video.HAVE_CURRENT_DATA) {
               resolve();
             } else {
@@ -242,15 +249,23 @@ const IDScanScreen = () => {
         });
       }
 
+      console.log('✅ Video is ready, dimensions:', video.videoWidth, 'x', video.videoHeight);
+
       // Additional stabilization wait
       console.log('⏳ Stabilizing camera...');
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      console.log('📷 Capturing image...');
+      console.log('📷 Attempting to capture image...');
       const imageData = captureImage();
       
+      console.log('🔍 Capture result:', {
+        hasData: !!imageData,
+        dataLength: imageData?.length || 0,
+        firstChars: imageData?.substring(0, 50) || 'none'
+      });
+      
       if (!imageData) {
-        throw new Error('Failed to capture image - no data returned');
+        throw new Error('captureImage() returned null - check video dimensions and canvas');
       }
 
       console.log('✅ Image captured successfully, processing...');
@@ -260,8 +275,13 @@ const IDScanScreen = () => {
       await processDocument(imageData);
 
     } catch (error) {
-      console.error('❌ Capture error:', error);
-      setCameraError(`Capture failed: ${error.message}. Please try again with better lighting.`);
+      console.error('❌ Capture error details:', {
+        message: error.message,
+        stack: error.stack,
+        videoExists: !!videoRef.current,
+        canvasExists: !!canvasRef.current
+      });
+      alert(`Failed to capture image: ${error.message}. Check console for details.`);
       // Don't stop camera on error so user can try again
     } finally {
       setCapturing(false);
