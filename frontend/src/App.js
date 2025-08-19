@@ -177,6 +177,34 @@ function App() {
         console.log("📷 Configuring laptop camera for ID document capture...");
       }
       
+      
+      // Try enhanced configuration first, with automatic fallback
+      let stream;
+      try {
+        console.log("🎯 Attempting enhanced camera configuration...");
+        stream = await navigator.mediaDevices.getUserMedia(cameraConfig);
+      } catch (enhancedError) {
+        console.warn("⚠️ Enhanced camera config failed:", enhancedError.message);
+        console.log("🔄 Falling back to basic camera configuration...");
+        
+        // Fallback configuration
+        const basicConfig = {
+          video: { 
+            width: { ideal: 1280, min: 640 }, 
+            height: { ideal: 720, min: 480 },
+            facingMode: mode === 'fingerprint' ? 'environment' : 'user'
+          }
+        };
+        
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(basicConfig);
+          console.log("✅ Basic camera configuration successful");
+        } catch (basicError) {
+          console.error("❌ Both enhanced and basic camera configurations failed");
+          throw basicError; // This will be caught by the outer try-catch
+        }
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia(cameraConfig);
       
       if (videoRef.current) {
