@@ -449,6 +449,30 @@ const IDScanScreen = () => {
                 </>
               )}
             </button>
+
+            {/* Mobile debugging info */}
+            <div style={{ 
+              marginTop: '1rem', 
+              padding: '0.75rem', 
+              background: 'rgba(99, 102, 241, 0.1)', 
+              borderRadius: '0.5rem',
+              fontSize: '0.75rem',
+              color: '#4338ca'
+            }}>
+              <div>📱 Device: {navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}</div>
+              <div>🔐 HTTPS: {window.location.protocol === 'https:' ? '✅' : '❌'}</div>
+              <div>📷 Camera API: {navigator.mediaDevices ? '✅' : '❌'}</div>
+              <div>🌐 URL: {window.location.href}</div>
+            </div>
+
+            <div style={{ 
+              marginTop: '0.75rem', 
+              fontSize: '0.75rem', 
+              color: '#6b7280',
+              textAlign: 'center'
+            }}>
+              💡 If camera doesn't open, try refreshing the page and allowing camera permissions when prompted.
+            </div>
           </div>
         </div>
       )}
