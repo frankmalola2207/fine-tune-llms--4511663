@@ -530,7 +530,9 @@ const IDScanScreen = () => {
               playsInline
               webkit-playsinline="true"
               muted
-              controls={process.env.NODE_ENV === 'development'}
+              width="100%"
+              height="100%"
+              style={{ objectFit: 'cover' }}
             />
             
             {/* Document frame overlay */}
