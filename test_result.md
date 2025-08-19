@@ -204,8 +204,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Backend laptop camera functionality testing complete"
-  stuck_tasks: []
+    - "Camera constraint compatibility issue needs fixing"
+  stuck_tasks:
+    - "ID Capture via Laptop Camera"
+    - "Enhanced Laptop Camera Support"
   test_all: false
   test_priority: "high_first"
 
@@ -216,3 +218,5 @@ agent_communication:
       message: "ISSUE RESOLVED: Added comprehensive bioMetricsApi testing object with testIDScan, testLaptopIDCapture, and other test functions. Enhanced both frontend and backend for laptop camera support with device-specific optimizations. Ready for backend testing."
     - agent: "testing"
       message: "BACKEND TESTING COMPLETE: All laptop camera ID capture functionality tested successfully. Key findings: 1) New test endpoint /api/test/laptop-camera/id-capture working, 2) Enhanced passport scan with laptop device_info and processing_options functional, 3) Dashboard tracks laptop scans separately, 4) Biometric config API compatible with enhanced features. All backend APIs operational. Installed missing tesseract dependency. Ready for main agent to summarize and finish."
+    - agent: "testing"
+      message: "FRONTEND TESTING COMPLETE: Critical camera constraint issue identified. Enhanced camera settings with zoom constraints cause getUserMedia to fail with 'Mandatory zoom constraints are not supported' error. bioMetricsApi functions work correctly, UI workflow is proper, but camera access fails. Need to remove unsupported zoom constraints from camera configuration. All other functionality (API exposure, error handling, UI flow) works as expected."
