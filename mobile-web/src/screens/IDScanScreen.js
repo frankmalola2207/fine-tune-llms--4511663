@@ -489,6 +489,7 @@ const IDScanScreen = () => {
               autoPlay
               playsInline
               muted
+              controls={process.env.NODE_ENV === 'development'}
             />
             
             {/* Document frame overlay */}
