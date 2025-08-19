@@ -1258,8 +1258,8 @@ function App() {
               </Card>
             )}
 
-            {/* Step 5: Completion */}
-            {activeStep === 5 && (
+            {/* Step 6: Completion */}
+            {activeStep === 6 && (
               <Card className="bg-white/70 backdrop-blur-sm border-white/20">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
