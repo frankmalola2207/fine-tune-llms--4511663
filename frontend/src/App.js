@@ -1124,6 +1124,9 @@ function App() {
                         date_of_birth: "",
                         document_number: "",
                         nationality: "",
+                        country_of_issue: "",
+                        sex: "",
+                        expiry_date: "",
                         user_id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
                       });
                       setMobileCaptures({});
