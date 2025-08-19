@@ -278,9 +278,42 @@ function App() {
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0);
+    
+    // Enhanced image capture for document scanning
+    if (captureMode === 'passport') {
+      console.log("📸 Capturing ID document image with enhanced processing...");
+      
+      // Apply image enhancements for better OCR
+      context.drawImage(video, 0, 0);
+      
+      // Get image data for processing
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      // Simple contrast enhancement for better text recognition
+      const contrast = 1.2; // Increase contrast slightly
+      const brightness = 10; // Increase brightness slightly
+      
+      for (let i = 0; i < data.length; i += 4) {
+        // Apply contrast and brightness to RGB channels
+        data[i] = Math.min(255, Math.max(0, (data[i] - 128) * contrast + 128 + brightness));     // Red
+        data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * contrast + 128 + brightness)); // Green
+        data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * contrast + 128 + brightness)); // Blue
+        // Alpha channel (data[i + 3]) remains unchanged
+      }
+      
+      // Put enhanced image data back to canvas
+      context.putImageData(imageData, 0, 0);
+      
+      console.log("✨ Image enhancement applied for better OCR");
+    } else {
+      // Standard capture for other modes
+      context.drawImage(video, 0, 0);
+    }
 
-    return canvas.toDataURL('image/jpeg', 0.8).split(',')[1]; // Return base64 without prefix
+    // Return high-quality JPEG for better processing
+    const quality = captureMode === 'passport' ? 0.9 : 0.8;
+    return canvas.toDataURL('image/jpeg', quality).split(',')[1]; // Return base64 without prefix
   };
 
   // Mobile biometric capture functions
