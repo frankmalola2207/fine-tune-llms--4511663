@@ -429,7 +429,7 @@ function App() {
       }));
 
       if (response.data.success) {
-        setActiveStep(5); // Move to completion
+        setActiveStep(6); // Move to completion
         fetchMobileDashboard(); // Refresh mobile dashboard
       }
 
