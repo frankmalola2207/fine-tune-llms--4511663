@@ -1679,6 +1679,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add security headers for camera access
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    
+    # Add permissions policy for camera access (required for Safari/WebKit)
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(self)"
+    
+    # Add content security policy for getUserMedia
+    response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; media-src 'self' blob: data:;"
+    
+    # Add other security headers for camera access
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    
+    return response
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
