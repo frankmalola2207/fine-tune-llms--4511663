@@ -505,9 +505,9 @@ class MobileTechnologiesAPITester:
         if not kyc_success:
             print("❌ Enhanced KYC initiation failed. Continuing with other tests...")
             
-        # Step 6: Mobile Biometric Captures
-        print("\n📋 STEP 6: Mobile Biometric Capture Testing")
-        print("   Testing all mobile biometric endpoints...")
+        # Step 6: Enhanced Mobile Biometric Captures with Personal Information
+        print("\n📋 STEP 6: Enhanced Mobile Biometric Capture Testing")
+        print("   Testing all mobile biometric endpoints with personal information extraction...")
         
         # Contactless Fingerprint
         fingerprint_success, _ = self.test_mobile_fingerprint_capture()
@@ -517,15 +517,24 @@ class MobileTechnologiesAPITester:
         liveness_success, _ = self.test_facial_liveness_detection()
         time.sleep(3)
         
-        # Passport OCR
-        passport_success, _ = self.test_passport_ocr_scan()
+        # Enhanced Passport OCR with Personal Information Extraction
+        passport_success, passport_response = self.test_passport_ocr_scan_enhanced()
         time.sleep(3)
+        
+        # Personal Information Verification (if passport OCR succeeded)
+        personal_info_success = True
+        if passport_success and passport_response.get('success'):
+            personal_info_success, _ = self.test_personal_info_verification()
+            time.sleep(3)
+        else:
+            print("   ⚠️ Skipping personal info verification due to passport OCR failure")
+            personal_info_success = False
         
         # NFC Reading
         nfc_success, _ = self.test_nfc_chip_reading()
         time.sleep(2)
         
-        mobile_biometric_success = fingerprint_success and liveness_success and passport_success and nfc_success
+        mobile_biometric_success = fingerprint_success and liveness_success and passport_success and nfc_success and personal_info_success
         
         # Final Results
         print("\n" + "="*80)
