@@ -114,39 +114,70 @@ const IDScanScreen = () => {
   };
 
   const captureImage = () => {
-    if (!videoRef.current || !canvasRef.current) return null;
+    if (!videoRef.current || !canvasRef.current) {
+      console.error('❌ Video or canvas ref not available');
+      return null;
+    }
 
     const canvas = canvasRef.current;
     const video = videoRef.current;
+    
+    // Check if video is ready and has dimensions
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      console.error('❌ Video not ready for capture');
+      return null;
+    }
+    
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      console.error('❌ Video has no dimensions');
+      return null;
+    }
+    
     const context = canvas.getContext('2d');
 
     // Set canvas dimensions to match video
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    
+    console.log(`📐 Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
 
-    // Draw video frame to canvas
-    context.drawImage(video, 0, 0);
+    try {
+      // Draw video frame to canvas
+      context.drawImage(video, 0, 0);
 
-    // Apply image enhancements for better OCR
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
+      // Apply image enhancements for better OCR
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
 
-    // Simple contrast and brightness enhancement
-    const contrast = 1.2;
-    const brightness = 10;
+      // Simple contrast and brightness enhancement
+      const contrast = 1.2;
+      const brightness = 10;
 
-    for (let i = 0; i < data.length; i += 4) {
-      // Apply contrast and brightness to RGB channels
-      data[i] = Math.min(255, Math.max(0, (data[i] - 128) * contrast + 128 + brightness));     // Red
-      data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * contrast + 128 + brightness)); // Green
-      data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * contrast + 128 + brightness)); // Blue
+      for (let i = 0; i < data.length; i += 4) {
+        // Apply contrast and brightness to RGB channels
+        data[i] = Math.min(255, Math.max(0, (data[i] - 128) * contrast + 128 + brightness));     // Red
+        data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * contrast + 128 + brightness)); // Green
+        data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * contrast + 128 + brightness)); // Blue
+      }
+
+      // Put enhanced image data back to canvas
+      context.putImageData(imageData, 0, 0);
+
+      // Return base64 image data
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      const base64Data = dataUrl.split(',')[1];
+      
+      if (!base64Data || base64Data.length < 100) {
+        console.error('❌ Generated image data is too small');
+        return null;
+      }
+      
+      console.log(`✅ Image captured: ${base64Data.length} characters`);
+      return base64Data;
+    } catch (drawError) {
+      console.error('❌ Error drawing video to canvas:', drawError);
+      return null;
     }
-
-    // Put enhanced image data back to canvas
-    context.putImageData(imageData, 0, 0);
-
-    // Return base64 image data
-    return canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
   };
 
   const handleCapture = async () => {
