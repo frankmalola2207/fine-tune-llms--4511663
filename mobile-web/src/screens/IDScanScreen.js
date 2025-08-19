@@ -63,13 +63,40 @@ const IDScanScreen = () => {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         
-        // Wait for video to be ready
-        videoRef.current.onloadedmetadata = () => {
-          console.log('✅ Video metadata loaded');
-          setCameraActive(true);
-        };
-        
-        console.log('✅ Camera stream assigned to video element');
+        // Wait for video to be ready with proper event handling
+        return new Promise((resolve, reject) => {
+          const video = videoRef.current;
+          
+          const onLoadedMetadata = () => {
+            console.log('✅ Video metadata loaded, dimensions:', video.videoWidth, 'x', video.videoHeight);
+            setCameraActive(true);
+            
+            // Clean up event listeners
+            video.removeEventListener('loadedmetadata', onLoadedMetadata);
+            video.removeEventListener('error', onVideoError);
+            
+            resolve();
+          };
+          
+          const onVideoError = (err) => {
+            console.error('❌ Video loading error:', err);
+            video.removeEventListener('loadedmetadata', onLoadedMetadata);
+            video.removeEventListener('error', onVideoError);
+            reject(new Error('Video failed to load'));
+          };
+          
+          video.addEventListener('loadedmetadata', onLoadedMetadata);
+          video.addEventListener('error', onVideoError);
+          
+          // Timeout fallback
+          setTimeout(() => {
+            if (!cameraActive) {
+              console.log('⏰ Video loading timeout, setting camera active anyway');
+              setCameraActive(true);
+              resolve();
+            }
+          }, 3000);
+        });
       }
     } catch (error) {
       console.error('❌ Camera access error:', error);
