@@ -442,14 +442,23 @@ function App() {
   };
 
   const checkOptionalBiometricsComplete = () => {
-    // Check if we should move to mandatory ID OCR step
-    // This happens either when optional biometrics are done or user chooses to skip
-    setActiveStep(3); // Always move to ID OCR (mandatory)
+    // Check if we should move to NFC or completion
+    const nfcEnabled = biometricConfig?.config?.nfc_reading?.enabled;
+    if (nfcEnabled && !mobileCaptures.nfc_read) {
+      setActiveStep(5); // NFC step
+    } else {
+      setActiveStep(6); // Completion
+    }
   };
 
   const skipOptionalBiometrics = () => {
-    // Allow user to skip optional biometric captures and go directly to mandatory ID OCR
-    setActiveStep(3);
+    // Allow user to skip optional biometric captures and go to NFC or completion
+    const nfcEnabled = biometricConfig?.config?.nfc_reading?.enabled;
+    if (nfcEnabled) {
+      setActiveStep(5); // NFC step
+    } else {
+      setActiveStep(6); // Completion
+    }
   };
 
   const getStatusIcon = (status) => {
