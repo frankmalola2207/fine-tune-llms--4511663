@@ -955,8 +955,8 @@ function App() {
               </Card>
             )}
 
-            {/* Step 2: Optional Mobile Biometric Capture */}
-            {activeStep === 2 && shouldShowOptionalBiometrics() && (
+            {/* Step 4: Optional Mobile Biometric Capture */}
+            {activeStep === 4 && shouldShowOptionalBiometrics() && (
               <div className="space-y-6">
                 {/* Optional Notice */}
                 <Alert>
