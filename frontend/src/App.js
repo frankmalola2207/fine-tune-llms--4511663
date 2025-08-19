@@ -168,10 +168,9 @@ function App() {
             width: { ideal: 1920, min: 1280 },
             height: { ideal: 1080, min: 720 },
             facingMode: { ideal: 'environment', exact: false }, // Prefer back camera but allow front
-            focusMode: 'continuous',
-            whiteBalanceMode: 'auto',
-            exposureMode: 'auto',
-            zoom: { ideal: 1.0, min: 1.0, max: 3.0 }
+            focusMode: { ideal: 'continuous' },
+            whiteBalanceMode: { ideal: 'auto' },
+            exposureMode: { ideal: 'auto' }
           }
         };
         
