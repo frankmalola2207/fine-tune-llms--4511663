@@ -194,29 +194,40 @@ function App() {
               const capabilities = track.getCapabilities();
               const constraints = {};
               
-              // Set focus mode if supported
+              // Only set constraints that are supported by the device
               if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
                 constraints.focusMode = 'continuous';
               }
               
-              // Set exposure mode if supported
               if (capabilities.exposureMode && capabilities.exposureMode.includes('auto')) {
                 constraints.exposureMode = 'auto';
               }
               
-              // Set white balance if supported
               if (capabilities.whiteBalanceMode && capabilities.whiteBalanceMode.includes('auto')) {
                 constraints.whiteBalanceMode = 'auto';
               }
               
-              // Apply constraints
+              // Only apply zoom if supported (many laptop cameras don't support zoom)
+              if (capabilities.zoom && capabilities.zoom.min !== undefined && capabilities.zoom.max !== undefined) {
+                console.log("📱 Zoom capability detected, applying zoom constraints");
+                constraints.zoom = 1.0;
+              } else {
+                console.log("📷 Zoom not supported on this camera, skipping zoom constraints");
+              }
+              
+              // Apply constraints only if we have any supported ones
               if (Object.keys(constraints).length > 0) {
                 track.applyConstraints(constraints).then(() => {
-                  console.log("✅ Enhanced camera settings applied for ID capture");
+                  console.log("✅ Enhanced camera settings applied for ID capture:", Object.keys(constraints));
                 }).catch(err => {
-                  console.warn("⚠️ Could not apply enhanced camera settings:", err);
+                  console.warn("⚠️ Some camera settings could not be applied:", err.message);
+                  console.log("📷 Camera will work with default settings");
                 });
+              } else {
+                console.log("📷 Using default camera settings (no enhanced constraints supported)");
               }
+            } else {
+              console.log("📷 Camera capabilities not available, using default settings");
             }
           };
         }
