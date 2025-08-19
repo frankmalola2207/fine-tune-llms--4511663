@@ -342,7 +342,17 @@ function App() {
           }));
         }
         
-        setActiveStep(3);
+        // ID OCR is mandatory - move to next step (NFC or completion)
+        const validation = await validateWorkflow();
+        if (validation && validation.can_proceed) {
+          // Check if NFC is enabled and not completed
+          const nfcEnabled = biometricConfig?.config?.nfc_reading?.enabled;
+          if (nfcEnabled && !mobileCaptures.nfc_read) {
+            setActiveStep(4); // NFC step
+          } else {
+            setActiveStep(5); // Completion
+          }
+        }
       }
 
     } catch (error) {
@@ -378,7 +388,7 @@ function App() {
       }));
 
       if (response.data.success) {
-        setActiveStep(4);
+        setActiveStep(5); // Move to completion
         fetchMobileDashboard(); // Refresh mobile dashboard
       }
 
@@ -390,11 +400,15 @@ function App() {
     }
   };
 
-  const checkMobileCapturesComplete = () => {
-    const captures = Object.keys(mobileCaptures);
-    if (captures.length >= 2) { // At least 2 biometric captures
-      setActiveStep(3);
-    }
+  const checkOptionalBiometricsComplete = () => {
+    // Check if we should move to mandatory ID OCR step
+    // This happens either when optional biometrics are done or user chooses to skip
+    setActiveStep(3); // Always move to ID OCR (mandatory)
+  };
+
+  const skipOptionalBiometrics = () => {
+    // Allow user to skip optional biometric captures and go directly to mandatory ID OCR
+    setActiveStep(3);
   };
 
   const getStatusIcon = (status) => {
@@ -410,6 +424,33 @@ function App() {
     if (step < activeStep) return "completed";
     if (step === activeStep) return "active";
     return "pending";
+  };
+
+  // Check if optional biometric step should be shown
+  const shouldShowOptionalBiometrics = () => {
+    return biometricConfig?.optional_features?.length > 0;
+  };
+
+  // Get step configuration based on available features
+  const getStepConfig = () => {
+    const hasOptionalBiometrics = shouldShowOptionalBiometrics();
+    
+    if (hasOptionalBiometrics) {
+      return [
+        { step: 1, label: "Personal Info", icon: Users },
+        { step: 2, label: "Biometrics (Optional)", icon: Smartphone },
+        { step: 3, label: "ID Scan (Required)", icon: FileText },
+        { step: 4, label: "NFC Verification", icon: Nfc },
+        { step: 5, label: "Complete", icon: Award }
+      ];
+    } else {
+      return [
+        { step: 1, label: "Personal Info", icon: Users },
+        { step: 3, label: "ID Scan (Required)", icon: FileText },
+        { step: 4, label: "NFC Verification", icon: Nfc },
+        { step: 5, label: "Complete", icon: Award }
+      ];
+    }
   };
 
   return (
