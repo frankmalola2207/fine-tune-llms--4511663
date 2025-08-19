@@ -460,6 +460,163 @@ class MobileTechnologiesAPITester:
         
         return success, response
 
+    def test_laptop_camera_test_endpoint(self):
+        """Test the new laptop camera ID capture test endpoint"""
+        success, response = self.run_test("Laptop Camera Test Endpoint", "POST", "test/laptop-camera/id-capture", 200, timeout=90)
+        
+        if success:
+            if response.get("success"):
+                print(f"   ✓ Laptop camera test endpoint successful")
+                print(f"   ✓ Test user ID: {response.get('test_user_id', 'N/A')}")
+                print(f"   ✓ Processing time: {response.get('processing_time', 'N/A')}")
+                
+                # Check device info
+                device_info = response.get('device_info', {})
+                if device_info.get('device_type') == 'laptop_camera':
+                    print(f"   ✓ Device type correctly identified as laptop_camera")
+                else:
+                    print(f"   ⚠️ Device type not correctly set: {device_info.get('device_type')}")
+                
+                # Check processing options
+                processing_options = response.get('processing_options', {})
+                if processing_options:
+                    print(f"   ✓ Processing options available: {list(processing_options.keys())}")
+                else:
+                    print(f"   ⚠️ Processing options not available")
+                
+                # Check AI analysis
+                ai_analysis = response.get('ai_analysis', {})
+                if ai_analysis:
+                    print(f"   ✓ AI analysis includes laptop-specific considerations")
+                    capture_quality = ai_analysis.get('capture_quality_assessment', '')
+                    if 'laptop' in capture_quality.lower():
+                        print(f"   ✓ Laptop-specific analysis detected")
+                    else:
+                        print(f"   ⚠️ Laptop-specific analysis not clearly present")
+                else:
+                    print(f"   ⚠️ AI analysis not available")
+            else:
+                print(f"   ⚠️ Laptop camera test failed: {response.get('error', 'Unknown error')}")
+        
+        return success, response
+
+    def test_enhanced_passport_scan_laptop_camera(self):
+        """Test enhanced passport scan endpoint with laptop camera device info"""
+        laptop_device_info = {
+            "device_type": "laptop_camera",
+            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "platform": "Win32",
+            "screen_resolution": "1920x1080",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        processing_options = {
+            "laptop_optimized": True,
+            "enhance_contrast": True,
+            "auto_rotate": True,
+            "noise_reduction": True,
+            "perspective_correction": True
+        }
+        
+        passport_data = {
+            "user_id": f"laptop_test_user_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            "passport_image": self.sample_image_data,
+            "extract_mrz": True,
+            "device_info": laptop_device_info,
+            "processing_options": processing_options
+        }
+        
+        success, response = self.run_test("Enhanced Passport Scan - Laptop Camera", "POST", "mobile/passport/scan", 200, passport_data, timeout=90)
+        
+        if success:
+            if response.get("success"):
+                print(f"   ✓ Laptop camera passport scan successful")
+                print(f"   ✓ OCR confidence: {response.get('ocr_confidence', 'N/A')}")
+                
+                # Check device-specific processing
+                ai_analysis = response.get('ai_analysis', {})
+                if ai_analysis:
+                    print(f"   ✓ AI analysis available")
+                    
+                    # Check for laptop-specific considerations
+                    capture_quality = ai_analysis.get('capture_quality_assessment', '')
+                    improvement_suggestions = ai_analysis.get('improvement_suggestions', [])
+                    
+                    if 'laptop' in str(capture_quality).lower() or any('laptop' in str(s).lower() for s in improvement_suggestions):
+                        print(f"   ✓ Laptop-specific analysis detected in AI response")
+                    else:
+                        print(f"   ⚠️ Laptop-specific analysis not clearly present")
+                    
+                    # Check processing quality indicators
+                    personal_info_quality = ai_analysis.get('personal_info_quality', 'unknown')
+                    auto_fill_confidence = ai_analysis.get('auto_fill_confidence', 0)
+                    print(f"   ✓ Personal info quality: {personal_info_quality}")
+                    print(f"   ✓ Auto-fill confidence: {auto_fill_confidence}")
+                else:
+                    print(f"   ⚠️ AI analysis not available")
+                
+                # Check personal information extraction
+                personal_info = response.get('personal_information', {})
+                if personal_info:
+                    print(f"   ✓ Personal information extracted for laptop capture")
+                    extraction_confidence = personal_info.get('extraction_confidence', 0)
+                    print(f"   ✓ Extraction confidence: {extraction_confidence}")
+                else:
+                    print(f"   ⚠️ Personal information not extracted")
+                
+                # Verify biometric_id is returned for storage tracking
+                biometric_id = response.get('biometric_id')
+                if biometric_id:
+                    print(f"   ✓ Biometric ID generated for tracking: {biometric_id}")
+                else:
+                    print(f"   ⚠️ Biometric ID not generated")
+                    
+            else:
+                print(f"   ⚠️ Laptop camera passport scan failed: {response.get('error', 'Unknown error')}")
+        
+        return success, response
+
+    def test_dashboard_laptop_tracking(self):
+        """Test dashboard to verify it tracks laptop passport scans separately"""
+        success, response = self.run_test("Dashboard Laptop Tracking", "GET", "mobile/dashboard", 200)
+        
+        if success:
+            statistics = response.get("statistics", {})
+            
+            # Check for laptop-specific tracking
+            laptop_passport_scans = statistics.get("laptop_passport_scans", 0)
+            total_captures = statistics.get("total_captures", 0)
+            passport_scans = statistics.get("passport_scans", 0)
+            
+            print(f"   ✓ Total captures: {total_captures}")
+            print(f"   ✓ Regular passport scans: {passport_scans}")
+            print(f"   ✓ Laptop passport scans: {laptop_passport_scans}")
+            
+            if "laptop_passport_scans" in statistics:
+                print(f"   ✓ Dashboard correctly tracks laptop passport scans separately")
+            else:
+                print(f"   ⚠️ Dashboard does not track laptop passport scans separately")
+            
+            # Check success rates
+            success_rates = response.get("success_rates", {})
+            laptop_success_rate = success_rates.get("laptop_camera_passport_ocr_with_personal_info", 0)
+            
+            if "laptop_camera_passport_ocr_with_personal_info" in success_rates:
+                print(f"   ✓ Laptop camera success rate tracked: {laptop_success_rate}%")
+            else:
+                print(f"   ⚠️ Laptop camera success rate not tracked")
+            
+            # Check mobile capabilities
+            mobile_capabilities = response.get("mobile_capabilities", {})
+            laptop_camera_ocr = mobile_capabilities.get("laptop_camera_ocr", False)
+            
+            if laptop_camera_ocr:
+                print(f"   ✓ Laptop camera OCR capability confirmed")
+            else:
+                print(f"   ⚠️ Laptop camera OCR capability not confirmed")
+        
+        return success, response
+
     def run_complete_mobile_workflow_test(self):
         """Run complete Mobile-Technologies workflow test"""
         print("\n" + "="*80)
