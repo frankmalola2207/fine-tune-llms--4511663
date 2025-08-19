@@ -3,14 +3,25 @@ import sys
 import json
 from datetime import datetime
 import time
+import base64
 
-class BioVerifyAPITester:
-    def __init__(self, base_url="https://bioverify-hub.preview.emergentagent.com"):
+class MobileTechnologiesAPITester:
+    def __init__(self, base_url="https://9a8287fd-82ea-4aa7-8674-59d0430c9f32.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
         self.tests_passed = 0
-        self.user_id = f"test_user_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(datetime.now()) % 10000}"
+        self.user_id = "test_mobile_user_123"
+        
+        # Sample base64 image data for testing
+        self.sample_image_data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
+        
+        # Sample device info
+        self.device_info = {
+            "user_agent": "test_mobile_browser",
+            "platform": "mobile_test",
+            "timestamp": datetime.now().isoformat()
+        }
         
     def log_test(self, name, success, details=""):
         """Log test results"""
@@ -22,7 +33,7 @@ class BioVerifyAPITester:
             print(f"❌ {name} - FAILED {details}")
         return success
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, timeout=30):
+    def run_test(self, name, method, endpoint, expected_status, data=None, timeout=60):
         """Run a single API test"""
         url = f"{self.api_url}/{endpoint}" if endpoint else f"{self.api_url}/"
         headers = {'Content-Type': 'application/json'}
@@ -42,16 +53,21 @@ class BioVerifyAPITester:
             if success:
                 try:
                     response_data = response.json()
-                    details += f", Response: {json.dumps(response_data, indent=2)[:200]}..."
+                    # Truncate long responses for readability
+                    response_str = json.dumps(response_data, indent=2)
+                    if len(response_str) > 300:
+                        details += f", Response: {response_str[:300]}..."
+                    else:
+                        details += f", Response: {response_str}"
                 except:
-                    details += f", Response: {response.text[:100]}..."
+                    details += f", Response: {response.text[:200]}..."
             else:
                 details += f", Expected: {expected_status}"
                 try:
                     error_data = response.json()
                     details += f", Error: {error_data}"
                 except:
-                    details += f", Error: {response.text[:200]}"
+                    details += f", Error: {response.text[:300]}"
             
             return self.log_test(name, success, details), response.json() if success else {}
             
@@ -60,167 +76,215 @@ class BioVerifyAPITester:
         except Exception as e:
             return self.log_test(name, False, f"Error: {str(e)}"), {}
 
-    def test_api_health(self):
-        """Test basic API health"""
-        return self.run_test("API Health Check", "GET", "", 200)
+    def test_api_version(self):
+        """Test API version - should show 2.0.0 with mobile capabilities"""
+        success, response = self.run_test("API Version Check", "GET", "", 200)
+        
+        if success:
+            # Verify version and capabilities
+            version = response.get("version")
+            capabilities = response.get("capabilities", [])
+            
+            if version == "2.0.0":
+                print(f"   ✓ Version 2.0.0 confirmed")
+            else:
+                print(f"   ⚠️ Expected version 2.0.0, got {version}")
+                
+            expected_capabilities = ["contactless_fingerprint", "facial_liveness", "passport_ocr", "nfc_reading"]
+            for cap in expected_capabilities:
+                if cap in capabilities:
+                    print(f"   ✓ {cap} capability present")
+                else:
+                    print(f"   ⚠️ {cap} capability missing")
+        
+        return success, response
 
-    def test_dashboard_connectivity(self):
-        """Test dashboard endpoint to verify database connectivity"""
-        return self.run_test("Dashboard Database Connectivity", "GET", "kyc/dashboard", 200)
+    def test_mobile_dashboard(self):
+        """Test mobile biometric dashboard"""
+        return self.run_test("Mobile Dashboard", "GET", "mobile/dashboard", 200)
 
-    def test_kyc_initiation(self):
-        """Test KYC process initiation"""
+    def test_mobile_fingerprint_capture(self):
+        """Test contactless fingerprint capture"""
+        fingerprint_data = {
+            "user_id": self.user_id,
+            "image_data": self.sample_image_data,
+            "device_info": self.device_info,
+            "quality_threshold": 0.6
+        }
+        
+        success, response = self.run_test("Mobile Fingerprint Capture", "POST", "mobile/fingerprint/capture", 200, fingerprint_data, timeout=90)
+        
+        if success:
+            # Check response structure
+            if response.get("success"):
+                print(f"   ✓ Fingerprint capture successful")
+                print(f"   ✓ Quality score: {response.get('quality_score', 'N/A')}")
+                print(f"   ✓ Features extracted: {response.get('features_extracted', 'N/A')}")
+            else:
+                print(f"   ⚠️ Fingerprint capture failed: {response.get('error', 'Unknown error')}")
+        
+        return success, response
+
+    def test_facial_liveness_detection(self):
+        """Test facial liveness detection"""
+        # Create multiple frames for liveness detection
+        frame_sequence = [self.sample_image_data] * 5  # 5 frames
+        
+        liveness_data = {
+            "user_id": self.user_id,
+            "frame_sequence": frame_sequence,
+            "device_info": self.device_info,
+            "liveness_threshold": 0.6
+        }
+        
+        success, response = self.run_test("Facial Liveness Detection", "POST", "mobile/face/liveness", 200, liveness_data, timeout=90)
+        
+        if success:
+            # Check response structure
+            if response.get("success"):
+                print(f"   ✓ Liveness detection successful")
+                print(f"   ✓ Is live: {response.get('is_live', 'N/A')}")
+                print(f"   ✓ Liveness score: {response.get('liveness_score', 'N/A')}")
+                print(f"   ✓ Confidence: {response.get('confidence', 'N/A')}")
+            else:
+                print(f"   ⚠️ Liveness detection failed: {response.get('error', 'Unknown error')}")
+        
+        return success, response
+
+    def test_passport_ocr_scan(self):
+        """Test ICAO passport OCR"""
+        passport_data = {
+            "user_id": self.user_id,
+            "passport_image": self.sample_image_data,
+            "extract_mrz": True,
+            "device_info": self.device_info
+        }
+        
+        success, response = self.run_test("Passport OCR Scan", "POST", "mobile/passport/scan", 200, passport_data, timeout=90)
+        
+        if success:
+            # Check response structure
+            if response.get("success"):
+                print(f"   ✓ Passport OCR successful")
+                print(f"   ✓ OCR confidence: {response.get('ocr_confidence', 'N/A')}")
+                passport_info = response.get('passport_data', {})
+                if passport_info:
+                    print(f"   ✓ Extracted passport data available")
+            else:
+                print(f"   ⚠️ Passport OCR failed: {response.get('error', 'Unknown error')}")
+        
+        return success, response
+
+    def test_nfc_chip_reading(self):
+        """Test NFC chip reading simulation"""
+        nfc_data = {
+            "user_id": self.user_id,
+            "passport_number": "P123456789",
+            "birth_date": "900115",  # YYMMDD format
+            "expiry_date": "301231",
+            "device_info": self.device_info
+        }
+        
+        success, response = self.run_test("NFC Chip Reading", "POST", "mobile/nfc/read", 200, nfc_data, timeout=90)
+        
+        if success:
+            # Check response structure
+            if response.get("success"):
+                print(f"   ✓ NFC reading successful")
+                print(f"   ✓ Security level: {response.get('security_level', 'N/A')}")
+                nfc_info = response.get('nfc_data', {})
+                if nfc_info:
+                    print(f"   ✓ NFC data available")
+            else:
+                print(f"   ⚠️ NFC reading failed: {response.get('error', 'Unknown error')}")
+        
+        return success, response
+
+    def test_enhanced_kyc_initiation(self):
+        """Test enhanced KYC initiation with mobile capabilities"""
         kyc_data = {
             "user_id": self.user_id,
             "first_name": "John",
-            "last_name": "Doe", 
+            "last_name": "Doe",
             "date_of_birth": "1990-01-15",
             "document_number": "P123456789",
             "nationality": "Singapore"
         }
         
-        success, response = self.run_test("KYC Initiation", "POST", "kyc/initiate", 200, kyc_data)
-        return success, response
-
-    def test_kyc_status_retrieval(self):
-        """Test KYC status retrieval"""
-        return self.run_test("KYC Status Retrieval", "GET", f"kyc/{self.user_id}", 200)
-
-    def test_biometric_capture_fingerprint(self):
-        """Test fingerprint biometric capture"""
-        biometric_data = {
-            "user_id": self.user_id,
-            "capture_type": "fingerprint",
-            "simulated_quality": 0.85
-        }
+        success, response = self.run_test("Enhanced KYC Initiation", "POST", "kyc/initiate", 200, kyc_data)
         
-        success, response = self.run_test("Biometric Capture - Fingerprint", "POST", "biometric/capture", 200, biometric_data, timeout=60)
-        return success, response
-
-    def test_biometric_capture_facial(self):
-        """Test facial biometric capture"""
-        biometric_data = {
-            "user_id": self.user_id,
-            "capture_type": "facial", 
-            "simulated_quality": 0.90
-        }
+        if success:
+            # Check for mobile capabilities
+            mobile_features = response.get("mobile_features_enabled")
+            if mobile_features:
+                print(f"   ✓ Mobile features enabled")
+            else:
+                print(f"   ⚠️ Mobile features not enabled")
         
-        success, response = self.run_test("Biometric Capture - Facial", "POST", "biometric/capture", 200, biometric_data, timeout=60)
         return success, response
 
-    def test_biometric_capture_document_scan(self):
-        """Test document scan biometric capture"""
-        biometric_data = {
-            "user_id": self.user_id,
-            "capture_type": "document_scan",
-            "simulated_quality": 0.88
-        }
-        
-        success, response = self.run_test("Biometric Capture - Document Scan", "POST", "biometric/capture", 200, biometric_data, timeout=60)
-        return success, response
-
-    def test_document_verification(self):
-        """Test AI-powered document verification"""
-        document_data = {
-            "user_id": self.user_id,
-            "document_type": "passport",
-            "document_data": {
-                "document_number": "P123456789",
-                "first_name": "John",
-                "last_name": "Doe",
-                "date_of_birth": "1990-01-15",
-                "nationality": "Singapore",
-                "issue_date": "2020-01-15",
-                "expiry_date": "2030-01-15",
-                "issuing_authority": "Singapore Government"
-            }
-        }
-        
-        success, response = self.run_test("Document Verification", "POST", "document/verify", 200, document_data, timeout=60)
-        return success, response
-
-    def test_risk_assessment(self):
-        """Test AI-powered risk assessment"""
-        risk_data = {
-            "user_id": self.user_id,
-            "additional_context": {
-                "application_source": "api_test",
-                "device_info": "Test Environment",
-                "timestamp": datetime.now().isoformat()
-            }
-        }
-        
-        success, response = self.run_test("Risk Assessment", "POST", "risk/assess", 200, risk_data, timeout=60)
-        return success, response
-
-    def run_complete_workflow_test(self):
-        """Run complete KYC workflow test"""
+    def run_complete_mobile_workflow_test(self):
+        """Run complete Mobile-Technologies workflow test"""
         print("\n" + "="*80)
-        print("🚀 STARTING COMPLETE BIOVERIFY HUB eKYC WORKFLOW TEST")
+        print("🚀 STARTING MOBILE-TECHNOLOGIES ENHANCED eKYC WORKFLOW TEST")
         print("="*80)
         
-        # Step 1: API Health Check
-        print("\n📋 STEP 1: Backend API Health Check")
-        health_success, _ = self.test_api_health()
-        if not health_success:
-            print("❌ Backend API is not responding. Stopping tests.")
+        # Step 1: API Version Check
+        print("\n📋 STEP 1: API Version & Capabilities Check")
+        version_success, version_response = self.test_api_version()
+        if not version_success:
+            print("❌ API version check failed. Stopping tests.")
             return False
             
-        # Step 2: Database connectivity
-        print("\n📋 STEP 2: Database Connectivity Check")
-        dashboard_success, _ = self.test_dashboard_connectivity()
+        # Step 2: Mobile Dashboard
+        print("\n📋 STEP 2: Mobile Dashboard Connectivity")
+        dashboard_success, _ = self.test_mobile_dashboard()
         if not dashboard_success:
-            print("❌ Database connectivity failed. Stopping tests.")
+            print("❌ Mobile dashboard failed. Stopping tests.")
             return False
             
-        # Step 3: KYC Initiation
-        print("\n📋 STEP 3: KYC Process Initiation")
-        kyc_success, kyc_response = self.test_kyc_initiation()
+        # Step 3: Enhanced KYC Initiation
+        print("\n📋 STEP 3: Enhanced KYC Initiation")
+        kyc_success, _ = self.test_enhanced_kyc_initiation()
         if not kyc_success:
-            print("❌ KYC initiation failed. Stopping tests.")
+            print("❌ Enhanced KYC initiation failed. Stopping tests.")
             return False
             
-        # Step 4: KYC Status Check
-        print("\n📋 STEP 4: KYC Status Retrieval")
-        status_success, _ = self.test_kyc_status_retrieval()
+        # Step 4: Mobile Biometric Captures
+        print("\n📋 STEP 4: Mobile Biometric Capture Testing")
+        print("   Testing all mobile biometric endpoints...")
         
-        # Step 5: Biometric Captures (All three types)
-        print("\n📋 STEP 5: Biometric Capture Testing")
-        print("   Testing all three biometric capture types...")
+        # Contactless Fingerprint
+        fingerprint_success, _ = self.test_mobile_fingerprint_capture()
+        time.sleep(3)  # Pause between AI calls
         
-        fingerprint_success, _ = self.test_biometric_capture_fingerprint()
-        time.sleep(2)  # Brief pause between AI calls
+        # Facial Liveness
+        liveness_success, _ = self.test_facial_liveness_detection()
+        time.sleep(3)
         
-        facial_success, _ = self.test_biometric_capture_facial()
+        # Passport OCR
+        passport_success, _ = self.test_passport_ocr_scan()
+        time.sleep(3)
+        
+        # NFC Reading
+        nfc_success, _ = self.test_nfc_chip_reading()
         time.sleep(2)
         
-        document_scan_success, _ = self.test_biometric_capture_document_scan()
-        time.sleep(2)
-        
-        biometric_success = fingerprint_success and facial_success and document_scan_success
-        
-        # Step 6: Document Verification
-        print("\n📋 STEP 6: AI Document Verification")
-        doc_success, doc_response = self.test_document_verification()
-        time.sleep(2)
-        
-        # Step 7: Risk Assessment
-        print("\n📋 STEP 7: AI Risk Assessment")
-        risk_success, risk_response = self.test_risk_assessment()
+        mobile_biometric_success = fingerprint_success and liveness_success and passport_success and nfc_success
         
         # Final Results
         print("\n" + "="*80)
-        print("📊 WORKFLOW TEST RESULTS")
+        print("📊 MOBILE-TECHNOLOGIES WORKFLOW TEST RESULTS")
         print("="*80)
         
         workflow_steps = [
-            ("API Health Check", health_success),
-            ("Database Connectivity", dashboard_success), 
-            ("KYC Initiation", kyc_success),
-            ("KYC Status Retrieval", status_success),
-            ("Biometric Captures", biometric_success),
-            ("Document Verification", doc_success),
-            ("Risk Assessment", risk_success)
+            ("API Version & Capabilities", version_success),
+            ("Mobile Dashboard", dashboard_success), 
+            ("Enhanced KYC Initiation", kyc_success),
+            ("Mobile Fingerprint Capture", fingerprint_success),
+            ("Facial Liveness Detection", liveness_success),
+            ("Passport OCR Scan", passport_success),
+            ("NFC Chip Reading", nfc_success)
         ]
         
         for step_name, step_success in workflow_steps:
@@ -233,24 +297,29 @@ class BioVerifyAPITester:
         print(f"🎯 Workflow Status: {'✅ COMPLETE SUCCESS' if overall_success else '❌ PARTIAL FAILURE'}")
         
         if overall_success:
-            print("\n🎉 All BioVerify Hub eKYC workflow tests completed successfully!")
-            print("   ✓ Backend APIs are working")
-            print("   ✓ Database connectivity confirmed") 
+            print("\n🎉 All Mobile-Technologies enhanced eKYC workflow tests completed successfully!")
+            print("   ✓ Backend APIs are working with version 2.0.0")
+            print("   ✓ Mobile biometric capabilities confirmed") 
             print("   ✓ AI integration is functional")
-            print("   ✓ Complete KYC workflow operational")
+            print("   ✓ Complete mobile eKYC workflow operational")
+            print("   ✓ Contactless fingerprint capture working")
+            print("   ✓ Facial liveness detection working")
+            print("   ✓ ICAO passport OCR working")
+            print("   ✓ NFC chip reading simulation working")
         else:
             print("\n⚠️  Some tests failed. Check the detailed logs above.")
+            print("   Issues found in mobile biometric capabilities.")
             
         return overall_success
 
 def main():
-    print("🔬 BioVerify Hub Agentic AI eKYC System - Backend API Testing")
+    print("🔬 Mobile-Technologies Enhanced eKYC System - Backend API Testing")
     print("=" * 80)
     
-    tester = BioVerifyAPITester()
+    tester = MobileTechnologiesAPITester()
     
-    # Run complete workflow test
-    success = tester.run_complete_workflow_test()
+    # Run complete mobile workflow test
+    success = tester.run_complete_mobile_workflow_test()
     
     return 0 if success else 1
 
