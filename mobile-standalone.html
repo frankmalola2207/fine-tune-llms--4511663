@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile-Technologies eKYC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e40af, #3730a3);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            padding: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+        }
+        
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 10px;
+        }
+        
+        .title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            border: 2px solid #10b981;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .camera-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+        
+        .camera-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            padding: 20px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .camera-instructions {
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        .camera-close {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        .camera-content {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .camera-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .document-frame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            aspect-ratio: 1.6;
+            border: 3px solid #10b981;
+            border-radius: 16px;
+            background: rgba(16, 185, 129, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: rgba(255, 255, 255, 0.9);
+            pointer-events: none;
+        }
+        
+        .document-frame::before {
+            content: '🆔';
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        
+        .face-frame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 240px;
+            height: 240px;
+            border: 3px solid #8b5cf6;
+            border-radius: 50%;
+            background: rgba(139, 92, 246, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.9);
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+        
+        .face-frame::before {
+            content: '👤';
+            font-size: 3rem;
+        }
+        
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        .camera-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 30px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .capture-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .capture-button:active {
+            transform: scale(0.95);
+        }
+        
+        .result-container {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .result-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        
+        .step {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            background: #10b981;
+            transform: scale(1.2);
+        }
+        
+        .step.completed {
+            background: #10b981;
+        }
+        
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .feature-list {
+            list-style: none;
+            margin: 20px 0;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 0;
+        }
+        
+        .feature-icon {
+            font-size: 1.2rem;
+            margin-right: 12px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .info-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+        }
+        
+        .info-label {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        .compliance {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Welcome Screen -->
+        <div id="welcome-screen">
+            <div class="header">
+                <div class="logo">📱</div>
+                <div class="title">Mobile-Technologies</div>
+                <div class="subtitle">Advanced Mobile Biometric eKYC Platform</div>
+            </div>
+            
+            <div class="step-indicator">
+                <div class="step active"></div>
+                <div class="step"></div>
+                <div class="step"></div>
+                <div class="step"></div>
+            </div>
+            
+            <div class="card">
+                <div class="status">
+                    <div class="status-item">
+                        <span id="camera-icon">📹</span>
+                        <span id="camera-status">Checking...</span>
+                    </div>
+                    <div class="status-item">
+                        <span>⚙️</span>
+                        <span>1 Mandatory, 3 Optional</span>
+                    </div>
+                </div>
+                
+                <h3 style="margin-bottom: 15px; text-align: center;">ID Document Scan First</h3>
+                <p style="margin-bottom: 20px; opacity: 0.9; text-align: center; line-height: 1.4;">
+                    We'll start by scanning your passport or ID document to automatically extract your personal information.
+                </p>
+                
+                <ul class="feature-list">
+                    <li class="feature-item">
+                        <span class="feature-icon">📷</span>
+                        <span>Scan your ID document with camera</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">🤖</span>
+                        <span>AI extracts your personal information</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">✅</span>
+                        <span>Review and verify the extracted data</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">👤</span>
+                        <span>Optional: Additional biometric security</span>
+                    </li>
+                </ul>
+                
+                <button id="start-btn" class="btn btn-primary" disabled>
+                    <div class="loading-spinner"></div>
+                    <span>Checking camera...</span>
+                </button>
+            </div>
+            
+            <div class="compliance">
+                🔒 GDPR • CCPA • Singapore Compliant
+            </div>
+        </div>
+        
+        <!-- ID Scan Screen -->
+        <div id="id-scan-screen" class="hidden">
+            <div class="header">
+                <div style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-bottom: 15px;">
+                    ⚠️ REQUIRED STEP
+                </div>
+                <div class="title" style="font-size: 1.5rem;">ID Document Scan</div>
+                <div class="subtitle" style="font-size: 0.9rem;">Position your ID document in the camera view</div>
+            </div>
+            
+            <div class="step-indicator">
+                <div class="step completed"></div>
+                <div class="step active"></div>
+                <div class="step"></div>
+                <div class="step"></div>
+            </div>
+            
+            <div class="card">
+                <div class="result-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                    📷
+                </div>
+                
+                <h3 style="color: #fca5a5; margin-bottom: 10px; text-align: center;">Required: Position ID document in camera view</h3>
+                <p style="color: #fca5a5; margin-bottom: 20px; text-align: center; font-size: 0.9rem;">
+                    We'll automatically extract your personal information from the document
+                </p>
+                
+                <ul class="feature-list">
+                    <li class="feature-item">
+                        <span class="feature-icon">💡</span>
+                        <span>Ensure good lighting</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">📐</span>
+                        <span>Keep document flat and steady</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">🎯</span>
+                        <span>Align document in frame</span>
+                    </li>
+                </ul>
+                
+                <button id="scan-btn" class="btn btn-primary">
+                    📸 Scan ID Document
+                </button>
+            </div>
+        </div>
+        
+        <!-- Personal Info Screen -->
+        <div id="personal-info-screen" class="hidden">
+            <div class="header">
+                <div class="title" style="font-size: 1.5rem;">Verify Information</div>
+                <div class="subtitle" style="font-size: 0.9rem;">Review extracted information</div>
+            </div>
+            
+            <div class="step-indicator">
+                <div class="step completed"></div>
+                <div class="step completed"></div>
+                <div class="step active"></div>
+                <div class="step"></div>
+            </div>
+            
+            <div class="card">
+                <div style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <span style="margin-right: 8px;">🤖</span>
+                        <strong style="color: #10b981;">Auto-extracted from ID</strong>
+                    </div>
+                    <p style="font-size: 0.85rem; color: #10b981; margin: 0;">
+                        Extraction confidence: 85%
+                    </p>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">First Name</div>
+                        <div class="info-value">John</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Last Name</div>
+                        <div class="info-value">Doe</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Date of Birth</div>
+                        <div class="info-value">1990-01-15</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Document Number</div>
+                        <div class="info-value">A123456789</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Nationality</div>
+                        <div class="info-value">USA</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Sex</div>
+                        <div class="info-value">M</div>
+                    </div>
+                </div>
+                
+                <button id="verify-btn" class="btn btn-primary">
+                    Continue to Biometric Verification ➡️
+                </button>
+            </div>
+        </div>
+        
+        <!-- Facial Biometrics Screen -->
+        <div id="facial-screen" class="hidden">
+            <div class="header">
+                <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-bottom: 15px;">
+                    ℹ️ OPTIONAL STEP
+                </div>
+                <div class="title" style="font-size: 1.5rem;">Facial Verification</div>
+                <div class="subtitle" style="font-size: 0.9rem;">Advanced liveness detection</div>
+            </div>
+            
+            <div class="step-indicator">
+                <div class="step completed"></div>
+                <div class="step completed"></div>
+                <div class="step completed"></div>
+                <div class="step active"></div>
+            </div>
+            
+            <div class="card">
+                <div class="result-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                    👤
+                </div>
+                
+                <h3 style="color: #c4b5fd; margin-bottom: 10px; text-align: center;">Facial Liveness Detection</h3>
+                <p style="color: #c4b5fd; margin-bottom: 20px; text-align: center; font-size: 0.9rem;">
+                    Look at the camera and follow instructions. We'll capture multiple frames to verify you're real.
+                </p>
+                
+                <ul class="feature-list">
+                    <li class="feature-item">
+                        <span class="feature-icon">🔒</span>
+                        <span>Anti-spoofing protection</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">👁️</span>
+                        <span>Real-time face detection</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">📱</span>
+                        <span>Movement analysis</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">👀</span>
+                        <span>Blink detection</span>
+                    </li>
+                </ul>
+                
+                <button id="facial-btn" class="btn btn-primary" style="margin-bottom: 10px;">
+                    👤 Start Facial Verification
+                </button>
+                
+                <button id="skip-btn" class="btn" style="background: rgba(255,255,255,0.1); color: white;">
+                    Skip (Optional)
+                </button>
+            </div>
+        </div>
+        
+        <!-- Completion Screen -->
+        <div id="completion-screen" class="hidden">
+            <div class="header">
+                <div class="result-icon" style="width: 100px; height: 100px; font-size: 3rem;">
+                    🎉
+                </div>
+                <div class="title" style="font-size: 1.8rem;">Verification Complete!</div>
+                <div class="subtitle" style="font-size: 1rem;">Your identity has been successfully verified</div>
+            </div>
+            
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #059669, #047857); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                        🔒
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; color: #10b981;">Security Level: Enhanced</h3>
+                        <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">Trust Score: 85%</p>
+                    </div>
+                </div>
+                
+                <div style="background: #10b981; height: 8px; border-radius: 4px; margin-bottom: 20px;">
+                    <div style="background: #059669; height: 100%; width: 85%; border-radius: 4px;"></div>
+                </div>
+                
+                <h3 style="margin-bottom: 15px;">Verification Summary</h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; text-align: center;">
+                    <div>
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #10b981;">2</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">Completed</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #10b981;">1</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">Skipped</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #10b981;">85%</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">OCR Accuracy</div>
+                    </div>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Name</div>
+                        <div class="info-value">John Doe</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Date of Birth</div>
+                        <div class="info-value">1990-01-15</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Document</div>
+                        <div class="info-value">A123456789</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Nationality</div>
+                        <div class="info-value">USA</div>
+                    </div>
+                </div>
+                
+                <button id="restart-btn" class="btn btn-primary" style="margin-top: 20px;">
+                    🔄 Start New Verification
+                </button>
+            </div>
+            
+            <div class="compliance">
+                Powered by Mobile-Technologies AI eKYC Platform<br>
+                Advanced Mobile Biometric Verification
+            </div>
+        </div>
+    </div>
+    
+    <!-- Camera Modal -->
+    <div id="camera-modal" class="camera-modal">
+        <div class="camera-header">
+            <div class="camera-instructions" id="camera-instruction">Position your document in the frame</div>
+            <button class="camera-close" onclick="closeCamera()">✕</button>
+        </div>
+        
+        <div class="camera-content">
+            <video id="camera-video" class="camera-video" autoplay playsinline muted></video>
+            <div id="document-overlay" class="document-frame">
+                <div>ID Document</div>
+            </div>
+            <div id="face-overlay" class="face-frame hidden"></div>
+        </div>
+        
+        <div class="camera-controls">
+            <button id="capture-btn" class="capture-button" onclick="capturePhoto()">📷</button>
+        </div>
+    </div>
+
+    <script>
+        let currentScreen = 1;
+        let stream = null;
+        let currentMode = 'document'; // 'document' or 'face'
+        
+        // Check camera availability
+        async function checkCamera() {
+            try {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    // Test camera access
+                    const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    testStream.getTracks().forEach(track => track.stop());
+                    
+                    document.getElementById('camera-icon').textContent = '📹';
+                    document.getElementById('camera-status').textContent = 'Camera Available';
+                    document.getElementById('start-btn').disabled = false;
+                    document.getElementById('start-btn').innerHTML = '<span>▶️ Start ID Scanning Process</span>';
+                } else {
+                    throw new Error('Camera not supported');
+                }
+            } catch (error) {
+                document.getElementById('camera-icon').textContent = '❌';
+                document.getElementById('camera-status').textContent = 'Camera Not Available';
+                document.getElementById('start-btn').innerHTML = '<span>❌ Camera Required</span>';
+                console.error('Camera check failed:', error);
+            }
+        }
+        
+        // Start camera with mode
+        async function startCamera(mode = 'document') {
+            try {
+                currentMode = mode;
+                const constraints = {
+                    video: {
+                        width: { ideal: 1920, min: 1280 },
+                        height: { ideal: 1080, min: 720 },
+                        facingMode: mode === 'document' ? { ideal: 'environment', exact: false } : 'user'
+                    }
+                };
+                
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                const video = document.getElementById('camera-video');
+                video.srcObject = stream;
+                
+                // Show appropriate overlay
+                if (mode === 'document') {
+                    document.getElementById('document-overlay').classList.remove('hidden');
+                    document.getElementById('face-overlay').classList.add('hidden');
+                    document.getElementById('camera-instruction').textContent = 'Position your ID document in the frame';
+                    document.getElementById('capture-btn').textContent = '📷';
+                } else {
+                    document.getElementById('document-overlay').classList.add('hidden');
+                    document.getElementById('face-overlay').classList.remove('hidden');
+                    document.getElementById('camera-instruction').textContent = 'Position your face in the circle';
+                    document.getElementById('capture-btn').textContent = '👤';
+                }
+                
+                document.getElementById('camera-modal').style.display = 'flex';
+                console.log('Camera started in', mode, 'mode');
+            } catch (error) {
+                alert('Failed to access camera: ' + error.message);
+                console.error('Camera start failed:', error);
+            }
+        }
+        
+        // Close camera
+        function closeCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            document.getElementById('camera-modal').style.display = 'none';
+        }
+        
+        // Capture photo
+        async function capturePhoto() {
+            try {
+                const video = document.getElementById('camera-video');
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0);
+                
+                // Simulate processing
+                document.getElementById('camera-instruction').textContent = 'Processing...';
+                document.getElementById('capture-btn').innerHTML = '<div class="loading-spinner"></div>';
+                
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                closeCamera();
+                
+                if (currentMode === 'document') {
+                    nextScreen(); // Go to personal info
+                } else {
+                    // Show facial results then go to completion
+                    showFacialResults();
+                }
+                
+            } catch (error) {
+                alert('Failed to capture photo: ' + error.message);
+                console.error('Capture failed:', error);
+            }
+        }
+        
+        // Show facial verification results
+        function showFacialResults() {
+            const facialScreen = document.getElementById('facial-screen');
+            facialScreen.innerHTML = `
+                <div class="result-container">
+                    <div class="result-icon">✅</div>
+                    <h2 style="color: #10b981; margin-bottom: 10px;">Liveness Verified!</h2>
+                    <p style="margin-bottom: 20px;">Liveness Score: 92%<br>Confidence: 88%</p>
+                    <div class="card">
+                        <h3 style="margin-bottom: 15px;">Detection Indicators:</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Frames Analyzed</div>
+                                <div class="info-value">10</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Movement</div>
+                                <div class="info-value">Yes</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Blink Detected</div>
+                                <div class="info-value">Yes</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Quality</div>
+                                <div class="info-value">85%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="nextScreen()">Continue Verification ➡️</button>
+                </div>
+            `;
+            
+            setTimeout(() => nextScreen(), 3000);
+        }
+        
+        // Navigate to next screen
+        function nextScreen() {
+            // Hide current screen
+            document.querySelectorAll('[id$="-screen"]').forEach(screen => {
+                screen.classList.add('hidden');
+            });
+            
+            currentScreen++;
+            
+            // Show next screen
+            const screens = ['welcome-screen', 'id-scan-screen', 'personal-info-screen', 'facial-screen', 'completion-screen'];
+            if (currentScreen <= screens.length) {
+                document.getElementById(screens[currentScreen - 1]).classList.remove('hidden');
+            }
+        }
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            checkCamera();
+            
+            document.getElementById('start-btn').onclick = nextScreen;
+            document.getElementById('scan-btn').onclick = () => startCamera('document');
+            document.getElementById('verify-btn').onclick = nextScreen;
+            document.getElementById('facial-btn').onclick = () => startCamera('face');
+            document.getElementById('skip-btn').onclick = nextScreen;
+            document.getElementById('restart-btn').onclick = () => {
+                currentScreen = 1;
+                document.querySelectorAll('[id$="-screen"]').forEach(screen => screen.classList.add('hidden'));
+                document.getElementById('welcome-screen').classList.remove('hidden');
+                checkCamera();
+            };
+        });
+        
+        // Handle orientation change
+        window.addEventListener('orientationchange', function() {
+            setTimeout(() => {
+                if (stream) {
+                    // Restart camera to adjust to new orientation
+                    closeCamera();
+                    setTimeout(() => startCamera(currentMode), 500);
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>
