@@ -573,7 +573,11 @@ const IDScanScreen = () => {
               muted
               width="100%"
               height="100%"
-              style={{ objectFit: 'cover' }}
+              style={{ 
+                objectFit: 'cover',
+                backgroundColor: '#000',
+                borderRadius: '8px'
+              }}
             />
             
             {/* Document frame overlay */}
