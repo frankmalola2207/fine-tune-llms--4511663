@@ -64,7 +64,7 @@ const IDScanScreen = () => {
         streamRef.current = stream;
         
         // Wait for video to be ready with proper event handling
-        return new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
           const video = videoRef.current;
           
           const onLoadedMetadata = () => {
@@ -92,11 +92,15 @@ const IDScanScreen = () => {
           setTimeout(() => {
             if (!cameraActive) {
               console.log('⏰ Video loading timeout, setting camera active anyway');
+              video.removeEventListener('loadedmetadata', onLoadedMetadata);
+              video.removeEventListener('error', onVideoError);
               setCameraActive(true);
               resolve();
             }
           }, 3000);
         });
+      } else {
+        throw new Error('Video element not available');
       }
     } catch (error) {
       console.error('❌ Camera access error:', error);
