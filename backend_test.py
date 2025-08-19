@@ -210,6 +210,65 @@ class MobileTechnologiesAPITester:
         
         return success, response
 
+    def test_personal_info_verification(self):
+        """Test personal information verification endpoint"""
+        # Sample extracted info (from OCR)
+        extracted_info = {
+            "first_name": "JOHN",
+            "last_name": "DOE",
+            "date_of_birth": "1990-01-15",
+            "document_number": "P123456789",
+            "nationality": "United States",
+            "sex": "Male",
+            "extraction_confidence": 0.85
+        }
+        
+        # Sample user-verified info (user corrections)
+        user_verified_info = {
+            "first_name": "John",
+            "last_name": "Doe",
+            "date_of_birth": "1990-01-15",
+            "document_number": "P123456789",
+            "nationality": "United States",
+            "sex": "Male"
+        }
+        
+        verification_data = {
+            "user_id": self.user_id,
+            "extracted_info": extracted_info,
+            "user_verified_info": user_verified_info,
+            "verification_notes": "Corrected name capitalization"
+        }
+        
+        success, response = self.run_test("Personal Information Verification", "POST", "mobile/personal-info/verify", 200, verification_data, timeout=90)
+        
+        if success:
+            # Check response structure
+            if response.get("success"):
+                print(f"   ✓ Personal info verification successful")
+                print(f"   ✓ Verification ID: {response.get('verification_id', 'N/A')}")
+                print(f"   ✓ Confidence score: {response.get('confidence_score', 'N/A')}")
+                
+                # Check verified information
+                verified_info = response.get('verified_information', {})
+                if verified_info:
+                    print(f"   ✓ Verified information stored")
+                else:
+                    print(f"   ⚠️ Verified information not returned")
+                
+                # Check AI analysis
+                verification_analysis = response.get('verification_analysis', {})
+                if verification_analysis:
+                    print(f"   ✓ AI verification analysis available")
+                    print(f"   ✓ Verification quality: {verification_analysis.get('verification_quality', 'N/A')}")
+                    print(f"   ✓ Final confidence: {verification_analysis.get('final_confidence', 'N/A')}")
+                else:
+                    print(f"   ⚠️ AI verification analysis not available")
+            else:
+                print(f"   ⚠️ Personal info verification failed: {response.get('error', 'Unknown error')}")
+        
+        return success, response
+
     def test_nfc_chip_reading(self):
         """Test NFC chip reading simulation"""
         nfc_data = {
