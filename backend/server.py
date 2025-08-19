@@ -1667,9 +1667,45 @@ async def initiate_kyc(request: dict):
 # Include the router in the main app
 app.include_router(api_router)
 
-# Mount static files for mobile-web app - this must come AFTER api_router
+# Custom mobile app handler with security headers
+@app.get("/mobile")
+@app.get("/mobile/{path:path}")
+async def serve_mobile_app(request):
+    """Serve mobile-web app with required security headers for camera access"""
+    from fastapi.responses import FileResponse, Response
+    import os
+    
+    # Get the requested path
+    path = request.path_params.get("path", "")
+    
+    if not path or path.endswith('/'):
+        # Serve index.html for root and directory requests
+        file_path = "/app/mobile-web/build/index.html"
+    else:
+        # Serve the specific file
+        file_path = f"/app/mobile-web/build/{path}"
+    
+    # Check if file exists
+    if not os.path.exists(file_path):
+        # For SPA routing, serve index.html for non-static files
+        if not path.startswith('static/'):
+            file_path = "/app/mobile-web/build/index.html"
+        else:
+            raise HTTPException(status_code=404, detail="File not found")
+    
+    # Create response with security headers
+    response = FileResponse(file_path)
+    
+    # Add security headers required for camera access
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(self)"
+    response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; media-src 'self' blob: data:;"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    
+    return response
+
+# Mount static files for mobile-web app - keep for direct static access
 app.mount("/mobile/static", StaticFiles(directory="/app/mobile-web/build/static"), name="mobile-static")
-app.mount("/mobile", StaticFiles(directory="/app/mobile-web/build", html=True), name="mobile-web")
 
 app.add_middleware(
     CORSMiddleware,
