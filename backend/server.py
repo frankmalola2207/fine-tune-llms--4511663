@@ -1000,17 +1000,17 @@ async def detect_mobile_liveness(request: FacialLivenessRequest):
             "error": f"Mobile liveness detection failed: {str(e)}"
         }
 
-# Mobile Passport OCR
+# Mobile Passport OCR with Personal Information Extraction
 @api_router.post("/mobile/passport/scan")
 async def scan_mobile_passport(request: PassportScanRequest):
-    """ICAO passport OCR optimized for mobile capture"""
+    """ICAO passport OCR with automatic personal information extraction"""
     try:
         start_time = datetime.now()
         
         ai_chat = await get_ai_chat()
         
-        # Process passport
-        ocr_result = passport_processor.process_mobile_passport(request.passport_image)
+        # Process passport with enhanced personal information extraction
+        ocr_result = passport_processor.process_mobile_passport_with_personal_info(request.passport_image)
         
         if not ocr_result['success']:
             return {
@@ -1018,22 +1018,31 @@ async def scan_mobile_passport(request: PassportScanRequest):
                 "error": "Failed to extract passport data from mobile capture"
             }
         
-        # AI analysis
+        # AI analysis with focus on personal information quality
         ai_prompt = f"""
-        Analyze this mobile passport OCR result:
-        - Extracted Data: {json.dumps(ocr_result['mrz_data'], indent=2)}
+        Analyze this mobile passport OCR result with extracted personal information:
+        - Extracted Personal Info: {json.dumps(ocr_result['personal_information'], indent=2)}
+        - MRZ Data: {json.dumps(ocr_result['mrz_data'], indent=2)}
         - OCR Confidence: {ocr_result['confidence']}
+        - Personal Info Quality: {ocr_result['mrz_data'].get('validation', {}).get('personal_info_quality', 'unknown')}
         - Device Info: {request.device_info}
         
         Provide analysis on:
-        1. Document authenticity assessment
-        2. OCR accuracy and completeness
-        3. ICAO compliance verification
-        4. Data consistency checks
-        5. Fraud indicators from mobile capture
-        6. Regulatory compliance (GDPR, CCPA, Singapore)
+        1. Personal information extraction accuracy and completeness
+        2. Name parsing quality (surname, given names separation)
+        3. Date formatting and validity (birth date, expiry date)
+        4. Document authenticity and ICAO compliance
+        5. Data consistency across extracted fields
+        6. Recommendations for user verification of extracted data
+        7. Auto-fill confidence and suggested user actions
         
-        Respond in JSON format with authenticity_score, accuracy_assessment, compliance_status, fraud_indicators, and recommendations.
+        Respond in JSON format with:
+        - personal_info_quality: high/medium/low
+        - extraction_accuracy: score 0-1
+        - auto_fill_confidence: score 0-1
+        - verification_recommendations: list of suggestions
+        - data_consistency_check: validation results
+        - user_review_required: boolean
         """
         
         user_message = UserMessage(text=ai_prompt)
@@ -1042,16 +1051,21 @@ async def scan_mobile_passport(request: PassportScanRequest):
         try:
             ai_analysis = json.loads(ai_response)
         except:
-            ai_analysis = {"analysis": ai_response}
+            ai_analysis = {
+                "personal_info_quality": "medium",
+                "extraction_accuracy": ocr_result['confidence'],
+                "auto_fill_confidence": 0.8,
+                "analysis": ai_response
+            }
         
         # Store processing results
         processing_time = (datetime.now() - start_time).total_seconds()
         
         biometric_data = BiometricData(
             user_id=request.user_id,
-            capture_type="mobile_passport_ocr",
+            capture_type="mobile_passport_ocr_with_personal_info",
             quality_score=ocr_result['confidence'],
-            confidence_score=ai_analysis.get('accuracy_assessment', {}).get('score', ocr_result['confidence']),
+            confidence_score=ai_analysis.get('extraction_accuracy', ocr_result['confidence']),
             processing_time=processing_time,
             device_info=request.device_info
         )
@@ -1063,9 +1077,12 @@ async def scan_mobile_passport(request: PassportScanRequest):
             "success": True,
             "biometric_id": biometric_data.id,
             "passport_data": ocr_result['mrz_data'],
+            "personal_information": ocr_result['personal_information'],
+            "auto_fill_data": ocr_result['auto_fill_data'],
             "ocr_confidence": ocr_result['confidence'],
             "processing_time": processing_time,
-            "ai_analysis": ai_analysis
+            "ai_analysis": ai_analysis,
+            "extraction_quality": ocr_result['mrz_data'].get('validation', {}).get('personal_info_quality', 'unknown')
         }
         
     except Exception as e:
