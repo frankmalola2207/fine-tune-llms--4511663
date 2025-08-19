@@ -1022,9 +1022,37 @@ function App() {
                   <div className="text-center p-6 bg-gradient-to-r from-green-50 to-teal-50 rounded-lg border border-green-200">
                     <Award className="w-16 h-16 mx-auto text-green-600 mb-4" />
                     <h3 className="text-2xl font-bold text-green-800 mb-2">Verification Successful!</h3>
-                    <p className="text-green-700">All mobile biometric captures completed successfully</p>
+                    <p className="text-green-700">All mandatory requirements completed • Optional biometrics captured</p>
                   </div>
 
+                  {/* Workflow Completion Summary */}
+                  {workflowValidation && (
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <h4 className="font-semibold mb-3 text-blue-800">📋 Completion Summary:</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <strong>Mandatory Steps:</strong>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Progress value={(workflowValidation.mandatory_completed / workflowValidation.mandatory_total) * 100} className="flex-1 h-2" />
+                            <span className="text-xs font-medium">
+                              {workflowValidation.mandatory_completed}/{workflowValidation.mandatory_total}
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <strong>Optional Steps:</strong>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Progress value={workflowValidation.optional_available > 0 ? (workflowValidation.optional_completed / workflowValidation.optional_available) * 100 : 100} className="flex-1 h-2" />
+                            <span className="text-xs font-medium">
+                              {workflowValidation.optional_completed}/{workflowValidation.optional_available}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Capture Summary */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {Object.entries(mobileCaptures).map(([type, data]) => (
                       <div key={type} className="text-center p-3 bg-white rounded-lg border">
@@ -1037,12 +1065,50 @@ function App() {
                         <div className="text-xs font-medium text-gray-700 capitalize">
                           {type.replace('_', ' ')}
                         </div>
-                        <Badge className={`mt-1 ${data.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {data.success ? 'Success' : 'Failed'}
-                        </Badge>
+                        <div className="flex items-center justify-center space-x-1 mt-1">
+                          <Badge className={`${data.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {data.success ? 'Success' : 'Failed'}
+                          </Badge>
+                          {type === 'passport_ocr' && (
+                            <Badge className="bg-red-100 text-red-800 text-xs">
+                              Required
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
+
+                  {/* Configuration Summary */}
+                  {biometricConfig && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-semibold mb-2 text-gray-800">⚙️ Platform Configuration:</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <strong>Mandatory Features:</strong>
+                          <ul className="mt-1 space-y-1">
+                            {biometricConfig.mandatory_features?.map(feature => (
+                              <li key={feature} className="flex items-center space-x-2">
+                                <Badge className="bg-red-100 text-red-800 text-xs">Required</Badge>
+                                <span className="capitalize">{feature.replace('_', ' ')}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <strong>Optional Features:</strong>
+                          <ul className="mt-1 space-y-1">
+                            {biometricConfig.optional_features?.map(feature => (
+                              <li key={feature} className="flex items-center space-x-2">
+                                <Badge className="bg-blue-100 text-blue-800 text-xs">Optional</Badge>
+                                <span className="capitalize">{feature.replace('_', ' ')}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <Button
                     onClick={() => {
@@ -1056,6 +1122,7 @@ function App() {
                         user_id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
                       });
                       setMobileCaptures({});
+                      setWorkflowValidation(null);
                     }}
                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
                   >
