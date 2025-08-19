@@ -185,17 +185,44 @@ const IDScanScreen = () => {
 
     try {
       setCapturing(true);
-      console.log('📸 Capturing ID document...');
-
-      // Wait a moment for stabilization
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const imageData = captureImage();
-      if (!imageData) {
-        throw new Error('Failed to capture image');
+      console.log('📸 Starting capture process...');
+      
+      // Check if video is ready
+      if (!videoRef.current) {
+        throw new Error('Video element not available');
+      }
+      
+      const video = videoRef.current;
+      
+      // Wait for video to be fully ready
+      if (video.readyState < video.HAVE_CURRENT_DATA) {
+        console.log('⏳ Waiting for video to be ready...');
+        await new Promise((resolve, reject) => {
+          const checkReady = () => {
+            if (video.readyState >= video.HAVE_CURRENT_DATA) {
+              resolve();
+            } else {
+              setTimeout(checkReady, 100);
+            }
+          };
+          checkReady();
+          // Timeout after 5 seconds
+          setTimeout(() => reject(new Error('Video not ready after 5 seconds')), 5000);
+        });
       }
 
-      console.log('✅ Image captured successfully');
+      // Additional stabilization wait
+      console.log('⏳ Stabilizing camera...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      console.log('📷 Capturing image...');
+      const imageData = captureImage();
+      
+      if (!imageData) {
+        throw new Error('Failed to capture image - no data returned');
+      }
+
+      console.log('✅ Image captured successfully, processing...');
       stopCamera();
 
       // Process with backend (or simulate if offline)
@@ -203,7 +230,8 @@ const IDScanScreen = () => {
 
     } catch (error) {
       console.error('❌ Capture error:', error);
-      alert('Failed to capture image. Please try again.');
+      setCameraError(`Capture failed: ${error.message}. Please try again with better lighting.`);
+      // Don't stop camera on error so user can try again
     } finally {
       setCapturing(false);
     }
