@@ -77,54 +77,68 @@ const IDScanScreen = () => {
       }
       
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        console.log('📹 Assigning stream to video element...');
+        
+        const video = videoRef.current;
+        
+        // Ensure video element is ready
+        video.srcObject = stream;
         streamRef.current = stream;
+        
+        console.log('📺 Video element state:', {
+          srcObject: !!video.srcObject,
+          videoWidth: video.videoWidth,
+          videoHeight: video.videoHeight,
+          readyState: video.readyState
+        });
         
         // Set camera active immediately to show video element
         setCameraActive(true);
         
-        // Explicitly play the video to handle autoplay restrictions
+        // Force video to load and play
         try {
-          await videoRef.current.play();
-          console.log('✅ Video started playing successfully');
+          await video.load();
+          await video.play();
+          console.log('✅ Video loaded and playing successfully');
         } catch (playError) {
-          console.warn('⚠️ Video autoplay failed, but stream is active:', playError);
-          // This is often expected due to browser autoplay policies
+          console.warn('⚠️ Video play failed:', playError);
+          // Try without load() call
+          try {
+            await video.play();
+            console.log('✅ Video playing without load()');
+          } catch (playError2) {
+            console.warn('⚠️ Video play still failed, but continuing:', playError2);
+          }
         }
         
-        // Wait for video to be ready with proper event handling
-        await new Promise((resolve, reject) => {
-          const video = videoRef.current;
-          
-          const onLoadedMetadata = () => {
-            console.log('✅ Video metadata loaded, dimensions:', video.videoWidth, 'x', video.videoHeight);
+        // Wait for video metadata with timeout
+        await new Promise((resolve) => {
+          const checkVideo = () => {
+            console.log('🔍 Checking video state:', {
+              readyState: video.readyState,
+              videoWidth: video.videoWidth,
+              videoHeight: video.videoHeight,
+              currentTime: video.currentTime
+            });
             
-            // Clean up event listeners
-            video.removeEventListener('loadedmetadata', onLoadedMetadata);
-            video.removeEventListener('error', onVideoError);
-            
-            resolve();
-          };
-          
-          const onVideoError = (err) => {
-            console.error('❌ Video loading error:', err);
-            video.removeEventListener('loadedmetadata', onLoadedMetadata);
-            video.removeEventListener('error', onVideoError);
-            reject(new Error('Video failed to load'));
-          };
-          
-          video.addEventListener('loadedmetadata', onLoadedMetadata);
-          video.addEventListener('error', onVideoError);
-          
-          // Timeout fallback
-          setTimeout(() => {
-            if (video.videoWidth === 0 || video.videoHeight === 0) {
-              console.log('⏰ Video loading timeout but keeping camera active');
-              video.removeEventListener('loadedmetadata', onLoadedMetadata);
-              video.removeEventListener('error', onVideoError);
+            if (video.readyState >= 2 && video.videoWidth > 0) {
+              console.log('✅ Video is ready with dimensions:', video.videoWidth, 'x', video.videoHeight);
+              resolve();
+            } else if (video.readyState === 4) {
+              console.log('✅ Video metadata loaded, resolving');
+              resolve();
+            } else {
+              setTimeout(checkVideo, 200);
             }
+          };
+          
+          checkVideo();
+          
+          // Always resolve after 5 seconds to prevent hanging
+          setTimeout(() => {
+            console.log('⏰ Video check timeout, proceeding anyway');
             resolve();
-          }, 3000);
+          }, 5000);
         });
       } else {
         throw new Error('Video element not available');
