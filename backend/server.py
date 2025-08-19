@@ -1458,6 +1458,7 @@ async def get_mobile_dashboard():
         fingerprint_captures = await db.biometric_data.count_documents({"capture_type": "mobile_fingerprint"})
         liveness_checks = await db.biometric_data.count_documents({"capture_type": "mobile_facial_liveness"})
         passport_scans = await db.biometric_data.count_documents({"capture_type": "mobile_passport_ocr"})
+        laptop_passport_scans = await db.biometric_data.count_documents({"capture_type": "laptop_camera_passport_ocr_with_personal_info"})
         nfc_reads = await db.biometric_data.count_documents({"capture_type": "mobile_nfc_read"})
         
         # Quality metrics
@@ -1471,7 +1472,7 @@ async def get_mobile_dashboard():
         recent_captures = await db.biometric_data.find({}).sort("created_at", -1).limit(10).to_list(10)
         
         # Success rates by capture type
-        capture_types = ["mobile_fingerprint", "mobile_facial_liveness", "mobile_passport_ocr", "mobile_nfc_read"]
+        capture_types = ["mobile_fingerprint", "mobile_facial_liveness", "mobile_passport_ocr", "laptop_camera_passport_ocr_with_personal_info", "mobile_nfc_read"]
         success_rates = {}
         
         for capture_type in capture_types:
@@ -1488,6 +1489,7 @@ async def get_mobile_dashboard():
                 "fingerprint_captures": fingerprint_captures,
                 "liveness_checks": liveness_checks,
                 "passport_scans": passport_scans,
+                "laptop_passport_scans": laptop_passport_scans,
                 "nfc_reads": nfc_reads,
                 "average_quality": round(avg_quality_score, 3)
             },
@@ -1497,6 +1499,7 @@ async def get_mobile_dashboard():
                 "contactless_fingerprint": True,
                 "facial_liveness": True,
                 "passport_ocr": True,
+                "laptop_camera_ocr": True,
                 "nfc_reading": True,
                 "ai_analysis": True
             }
@@ -1505,6 +1508,59 @@ async def get_mobile_dashboard():
     except Exception as e:
         logging.error(f"Mobile dashboard error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Dashboard data fetch failed: {str(e)}")
+
+# Test endpoint for laptop camera functionality
+@api_router.post("/test/laptop-camera/id-capture")
+async def test_laptop_camera_id_capture():
+    """Test endpoint for laptop camera ID capture functionality"""
+    try:
+        # Generate test user
+        test_user_id = f"test_laptop_user_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        # Mock test image data (base64 encoded test passport)
+        test_image_data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+        
+        # Create test request
+        test_request = PassportScanRequest(
+            user_id=test_user_id,
+            passport_image=test_image_data,
+            extract_mrz=True,
+            device_info={
+                "device_type": "laptop_camera",
+                "user_agent": "Test Browser",
+                "platform": "Test Platform",
+                "screen_resolution": "1920x1080",
+                "timestamp": datetime.now().isoformat()
+            },
+            processing_options={
+                "enhance_contrast": True,
+                "auto_rotate": True,
+                "noise_reduction": True,
+                "laptop_optimized": True
+            }
+        )
+        
+        # Test the endpoint
+        result = await scan_mobile_passport(test_request)
+        
+        return {
+            "success": True,
+            "message": "Laptop camera ID capture test completed successfully",
+            "test_user_id": test_user_id,
+            "endpoint_available": True,
+            "processing_result": result,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logging.error(f"Laptop camera test error: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Laptop camera test failed: {str(e)}",
+            "endpoint_available": True,
+            "error_details": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 @api_router.post("/kyc/workflow/validate")
 async def validate_kyc_workflow(request: dict):
