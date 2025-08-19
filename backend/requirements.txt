@@ -24,3 +24,10 @@ python-multipart>=0.0.9
 jq>=1.6.0
 typer>=0.9.0
 emergentintegrations
+opencv-python>=4.8.0
+mediapipe>=0.10.0
+pytesseract>=0.3.10
+passporteye>=2.2.0
+nfcpy>=1.0.0
+scikit-image>=0.20.0
+pycryptodome>=3.20.0
