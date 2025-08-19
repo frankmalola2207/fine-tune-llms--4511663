@@ -744,10 +744,84 @@ def parse_from_mongo(item):
         item['completed_at'] = datetime.fromisoformat(item['completed_at'])
     return item
 
+# Configuration for optional biometric features
+BIOMETRIC_CONFIG = {
+    "contactless_fingerprint": {
+        "enabled": True,
+        "mandatory": False,
+        "description": "Smartphone camera-based contactless fingerprint capture"
+    },
+    "facial_liveness": {
+        "enabled": True, 
+        "mandatory": False,
+        "description": "Advanced facial liveness detection and anti-spoofing"
+    },
+    "facial_matching": {
+        "enabled": True,
+        "mandatory": False, 
+        "description": "Facial biometric matching and verification"
+    },
+    "passport_ocr": {
+        "enabled": True,
+        "mandatory": True,
+        "description": "ICAO passport OCR and MRZ extraction - REQUIRED"
+    },
+    "nfc_reading": {
+        "enabled": True,
+        "mandatory": False,
+        "description": "NFC chip reading for enhanced security"
+    }
+}
+
 # Enhanced Routes
 @api_router.get("/")
 async def root():
-    return {"message": "Mobile-Technologies Agentic AI eKYC System", "version": "2.0.0", "capabilities": ["contactless_fingerprint", "facial_liveness", "passport_ocr", "nfc_reading"]}
+    return {
+        "message": "Mobile-Technologies Agentic AI eKYC System", 
+        "version": "2.0.0", 
+        "capabilities": ["contactless_fingerprint", "facial_liveness", "passport_ocr", "nfc_reading"],
+        "biometric_config": BIOMETRIC_CONFIG
+    }
+
+@api_router.get("/config/biometric")
+async def get_biometric_config():
+    """Get current biometric feature configuration"""
+    return {
+        "success": True,
+        "config": BIOMETRIC_CONFIG,
+        "mandatory_features": [k for k, v in BIOMETRIC_CONFIG.items() if v["mandatory"]],
+        "optional_features": [k for k, v in BIOMETRIC_CONFIG.items() if v["enabled"] and not v["mandatory"]]
+    }
+
+@api_router.post("/config/biometric")
+async def update_biometric_config(config_update: dict):
+    """Update biometric feature configuration"""
+    try:
+        global BIOMETRIC_CONFIG
+        
+        for feature, settings in config_update.items():
+            if feature in BIOMETRIC_CONFIG:
+                # Don't allow disabling mandatory features
+                if BIOMETRIC_CONFIG[feature]["mandatory"] and not settings.get("enabled", True):
+                    return {
+                        "success": False,
+                        "error": f"Cannot disable mandatory feature: {feature}"
+                    }
+                
+                # Update configuration
+                BIOMETRIC_CONFIG[feature].update(settings)
+        
+        return {
+            "success": True,
+            "message": "Biometric configuration updated successfully",
+            "config": BIOMETRIC_CONFIG
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Configuration update failed: {str(e)}"
+        }
 
 # Mobile Fingerprint Capture
 @api_router.post("/mobile/fingerprint/capture")
