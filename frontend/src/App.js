@@ -43,6 +43,9 @@ function App() {
     date_of_birth: "",
     document_number: "",
     nationality: "",
+    country_of_issue: "",
+    sex: "",
+    expiry_date: "",
     user_id: ""
   });
   
