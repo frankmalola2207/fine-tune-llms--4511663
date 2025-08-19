@@ -521,7 +521,14 @@ const IDScanScreen = () => {
 
             <button
               className={`btn btn-danger w-full ${state.loading ? 'btn:disabled' : ''}`}
-              onClick={startCamera}
+              onClick={async () => {
+                try {
+                  await startCamera();
+                } catch (error) {
+                  console.error('❌ Failed to start camera:', error);
+                  setCameraError(`Failed to start camera: ${error.message}`);
+                }
+              }}
               disabled={state.loading}
             >
               {state.loading ? (
