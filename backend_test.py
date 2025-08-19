@@ -200,6 +200,149 @@ class MobileTechnologiesAPITester:
         
         return success, response
 
+    def test_biometric_config_get(self):
+        """Test GET biometric configuration"""
+        success, response = self.run_test("Get Biometric Configuration", "GET", "config/biometric", 200)
+        
+        if success:
+            # Verify configuration structure
+            config = response.get("config", {})
+            mandatory_features = response.get("mandatory_features", [])
+            optional_features = response.get("optional_features", [])
+            
+            print(f"   ✓ Configuration retrieved")
+            print(f"   ✓ Mandatory features: {mandatory_features}")
+            print(f"   ✓ Optional features: {optional_features}")
+            
+            # Verify passport_ocr is mandatory
+            if "passport_ocr" in mandatory_features:
+                print(f"   ✓ passport_ocr is correctly set as mandatory")
+            else:
+                print(f"   ⚠️ passport_ocr should be mandatory")
+                
+            # Check expected configuration structure
+            expected_features = ["contactless_fingerprint", "facial_liveness", "passport_ocr", "nfc_reading"]
+            for feature in expected_features:
+                if feature in config:
+                    feature_config = config[feature]
+                    enabled = feature_config.get("enabled", False)
+                    mandatory = feature_config.get("mandatory", False)
+                    print(f"   ✓ {feature}: enabled={enabled}, mandatory={mandatory}")
+                else:
+                    print(f"   ⚠️ {feature} missing from configuration")
+        
+        return success, response
+
+    def test_biometric_config_update(self):
+        """Test POST biometric configuration update"""
+        # Try to update optional feature configuration
+        config_update = {
+            "contactless_fingerprint": {
+                "enabled": True,
+                "mandatory": False
+            }
+        }
+        
+        success, response = self.run_test("Update Biometric Configuration", "POST", "config/biometric", 200, config_update)
+        
+        if success:
+            if response.get("success"):
+                print(f"   ✓ Configuration update successful")
+            else:
+                print(f"   ⚠️ Configuration update failed: {response.get('error', 'Unknown error')}")
+        
+        return success, response
+
+    def test_biometric_config_mandatory_protection(self):
+        """Test that mandatory features cannot be disabled"""
+        # Try to disable mandatory passport_ocr
+        config_update = {
+            "passport_ocr": {
+                "enabled": False,
+                "mandatory": True
+            }
+        }
+        
+        success, response = self.run_test("Test Mandatory Feature Protection", "POST", "config/biometric", 200, config_update)
+        
+        if success:
+            # Should fail to disable mandatory feature
+            if not response.get("success"):
+                print(f"   ✓ Mandatory feature protection working: {response.get('error', 'Protected')}")
+            else:
+                print(f"   ⚠️ Mandatory feature protection failed - should not allow disabling")
+        
+        return success, response
+
+    def test_workflow_validation_mandatory_only(self):
+        """Test workflow validation with mandatory features only"""
+        validation_data = {
+            "user_id": self.user_id,
+            "completed_captures": ["passport_ocr"]  # Only mandatory feature
+        }
+        
+        success, response = self.run_test("Workflow Validation - Mandatory Only", "POST", "kyc/workflow/validate", 200, validation_data)
+        
+        if success:
+            workflow_valid = response.get("workflow_valid", False)
+            can_proceed = response.get("can_proceed", False)
+            mandatory_completed = response.get("mandatory_completed", 0)
+            mandatory_total = response.get("mandatory_total", 0)
+            
+            print(f"   ✓ Workflow valid: {workflow_valid}")
+            print(f"   ✓ Can proceed: {can_proceed}")
+            print(f"   ✓ Mandatory completed: {mandatory_completed}/{mandatory_total}")
+            
+            if workflow_valid and can_proceed:
+                print(f"   ✓ Workflow validation working correctly for mandatory-only completion")
+            else:
+                print(f"   ⚠️ Workflow should be valid with mandatory features completed")
+        
+        return success, response
+
+    def test_workflow_validation_with_optional(self):
+        """Test workflow validation with optional features"""
+        validation_data = {
+            "user_id": self.user_id,
+            "completed_captures": ["passport_ocr", "fingerprint", "facial_liveness"]  # Mandatory + optional
+        }
+        
+        success, response = self.run_test("Workflow Validation - With Optional", "POST", "kyc/workflow/validate", 200, validation_data)
+        
+        if success:
+            workflow_valid = response.get("workflow_valid", False)
+            optional_completed = response.get("optional_completed", 0)
+            completed_optional = response.get("completed_optional", [])
+            
+            print(f"   ✓ Workflow valid: {workflow_valid}")
+            print(f"   ✓ Optional completed: {optional_completed}")
+            print(f"   ✓ Completed optional features: {completed_optional}")
+        
+        return success, response
+
+    def test_workflow_validation_incomplete(self):
+        """Test workflow validation with incomplete mandatory features"""
+        validation_data = {
+            "user_id": self.user_id,
+            "completed_captures": ["fingerprint"]  # Only optional, missing mandatory
+        }
+        
+        success, response = self.run_test("Workflow Validation - Incomplete", "POST", "kyc/workflow/validate", 200, validation_data)
+        
+        if success:
+            workflow_valid = response.get("workflow_valid", False)
+            missing_mandatory = response.get("missing_mandatory", [])
+            
+            print(f"   ✓ Workflow valid: {workflow_valid}")
+            print(f"   ✓ Missing mandatory: {missing_mandatory}")
+            
+            if not workflow_valid and "passport_ocr" in missing_mandatory:
+                print(f"   ✓ Correctly identified missing mandatory features")
+            else:
+                print(f"   ⚠️ Should identify missing mandatory passport_ocr")
+        
+        return success, response
+
     def test_enhanced_kyc_initiation(self):
         """Test enhanced KYC initiation with mobile capabilities"""
         kyc_data = {
