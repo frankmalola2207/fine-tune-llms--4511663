@@ -844,16 +844,19 @@ function App() {
               </div>
             )}
 
-            {/* Step 3: Document Scanning */}
+            {/* Step 3: Mandatory Document Scanning */}
             {activeStep === 3 && (
-              <Card className="bg-white/70 backdrop-blur-sm border-white/20">
+              <Card className="bg-white/70 backdrop-blur-sm border-white/20 border-red-200">
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Scan className="w-5 h-5" />
-                    <span>ICAO Passport OCR</span>
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Scan className="w-5 h-5" />
+                      <span>ICAO Passport OCR - MANDATORY</span>
+                    </div>
+                    <Badge className="bg-red-100 text-red-800">Required Step</Badge>
+                  </div>
                   <CardDescription>
-                    Mobile-optimized passport scanning with MRZ extraction
+                    ID document verification is mandatory for compliance and cannot be skipped
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -863,15 +866,15 @@ function App() {
                         {getStatusIcon(mobileCaptures.passport_ocr.success ? "success" : "failed")}
                         <AlertDescription>
                           {mobileCaptures.passport_ocr.success 
-                            ? `OCR Confidence: ${(mobileCaptures.passport_ocr.ocr_confidence * 100).toFixed(1)}%`
-                            : mobileCaptures.passport_ocr.error
+                            ? `OCR Confidence: ${(mobileCaptures.passport_ocr.ocr_confidence * 100).toFixed(1)}% - MANDATORY REQUIREMENT MET`
+                            : `ID verification failed: ${mobileCaptures.passport_ocr.error}`
                           }
                         </AlertDescription>
                       </Alert>
                       
                       {mobileCaptures.passport_ocr.success && mobileCaptures.passport_ocr.passport_data && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <h4 className="font-semibold mb-2">Extracted Data:</h4>
+                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                          <h4 className="font-semibold mb-2 text-green-800">✅ ID Verification Complete - Required Data Extracted:</h4>
                           <div className="grid grid-cols-2 gap-2 text-sm">
                             <div><strong>Name:</strong> {mobileCaptures.passport_ocr.passport_data.surname}, {mobileCaptures.passport_ocr.passport_data.given_names}</div>
                             <div><strong>Document:</strong> {mobileCaptures.passport_ocr.passport_data.passport_number}</div>
@@ -881,24 +884,53 @@ function App() {
                         </div>
                       )}
                       
-                      <Button
-                        onClick={() => setActiveStep(4)}
-                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
-                      >
-                        Proceed to NFC Verification
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="text-center space-y-4">
-                      <div className="p-8 border-2 border-dashed border-gray-300 rounded-lg">
-                        <Scan className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                        <p className="text-gray-600 mb-4">Position passport MRZ area in camera view</p>
+                      {mobileCaptures.passport_ocr.success ? (
+                        <Button
+                          onClick={async () => {
+                            const validation = await validateWorkflow();
+                            if (validation && validation.can_proceed) {
+                              // Check if NFC is enabled
+                              const nfcEnabled = biometricConfig?.config?.nfc_reading?.enabled;
+                              if (nfcEnabled && !mobileCaptures.nfc_read) {
+                                setActiveStep(4); // NFC step
+                              } else {
+                                setActiveStep(5); // Completion
+                              }
+                            }
+                          }}
+                          className="w-full bg-gradient-to-r from-green-600 to-teal-600 text-white"
+                        >
+                          Mandatory Verification Complete - Continue
+                        </Button>
+                      ) : (
                         <Button
                           onClick={capturePassportOCR}
                           disabled={loading || currentCapture === 'passport'}
-                          className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                          className="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white"
                         >
-                          {currentCapture === 'passport' ? "Scanning..." : "Scan Passport"}
+                          {currentCapture === 'passport' ? "Scanning..." : "Retry Mandatory ID Scan"}
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-4">
+                      <Alert>
+                        <AlertTriangle className="w-4 h-4" />
+                        <AlertDescription>
+                          <strong>MANDATORY STEP:</strong> ID document verification is required by regulation and cannot be skipped.
+                        </AlertDescription>
+                      </Alert>
+                      
+                      <div className="p-8 border-2 border-dashed border-red-300 rounded-lg bg-red-50">
+                        <Scan className="w-12 h-12 mx-auto text-red-500 mb-4" />
+                        <h3 className="text-lg font-semibold text-red-800 mb-2">Required: Position passport MRZ area in camera view</h3>
+                        <p className="text-red-600 mb-4">This step is mandatory for compliance verification</p>
+                        <Button
+                          onClick={capturePassportOCR}
+                          disabled={loading || currentCapture === 'passport'}
+                          className="bg-gradient-to-r from-red-600 to-orange-600 text-white"
+                        >
+                          {currentCapture === 'passport' ? "Scanning..." : "Scan Required ID Document"}
                         </Button>
                       </div>
                     </div>
