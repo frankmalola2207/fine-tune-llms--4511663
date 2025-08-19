@@ -439,7 +439,7 @@ class MobileLivenessDetector:
                 'error': str(e)
             }
 
-# Mobile Passport OCR Processor
+# Enhanced Mobile Passport OCR Processor with Personal Information Extraction
 class MobilePassportProcessor:
     def __init__(self):
         # Configure Tesseract for mobile OCR
@@ -453,8 +453,8 @@ class MobilePassportProcessor:
             'SGP', 'MYS', 'THA', 'IDN', 'PHL', 'VNM', 'KOR', 'HKG', 'TWN', 'MAC'
         }
     
-    def process_mobile_passport(self, image_data: str):
-        """Process passport image from mobile device"""
+    def process_mobile_passport_with_personal_info(self, image_data: str):
+        """Process passport image and extract comprehensive personal information"""
         try:
             # Decode image
             image_bytes = base64.b64decode(image_data)
@@ -469,156 +469,133 @@ class MobilePassportProcessor:
             
             # Extract and parse MRZ
             mrz_text = self._extract_mrz_mobile(mrz_region)
-            parsed_data = self._parse_mrz_data(mrz_text)
+            parsed_data = self._parse_mrz_data_enhanced(mrz_text)
+            
+            # Extract personal information for form auto-fill
+            personal_info = self._extract_personal_information(parsed_data)
             
             return {
                 'success': True,
                 'mrz_data': parsed_data,
+                'personal_information': personal_info,
                 'mrz_region_bbox': bbox,
-                'confidence': self._calculate_ocr_confidence(parsed_data)
+                'confidence': self._calculate_ocr_confidence(parsed_data),
+                'auto_fill_data': personal_info  # For frontend auto-population
             }
             
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Mobile passport processing failed: {str(e)}")
     
-    def _preprocess_mobile_passport(self, img_array):
-        """Preprocess passport image for mobile OCR"""
+    def _extract_personal_information(self, parsed_data):
+        """Extract personal information suitable for form auto-fill"""
         try:
-            # Convert to grayscale
-            if len(img_array.shape) == 3:
-                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            personal_info = {
+                'first_name': '',
+                'last_name': '',
+                'date_of_birth': '',
+                'document_number': '',
+                'nationality': '',
+                'country_of_issue': '',
+                'sex': '',
+                'expiry_date': '',
+                'extraction_confidence': 0.0
+            }
+            
+            if not parsed_data:
+                return personal_info
+            
+            # Extract names
+            if 'given_names' in parsed_data and parsed_data['given_names']:
+                given_names = parsed_data['given_names'].strip()
+                # Split multiple given names, take first as first_name
+                name_parts = given_names.split()
+                if name_parts:
+                    personal_info['first_name'] = name_parts[0]
+                    if len(name_parts) > 1:
+                        # Join remaining parts as middle names with first name
+                        personal_info['first_name'] = ' '.join(name_parts[:2])  # Take first two names
+            
+            if 'surname' in parsed_data and parsed_data['surname']:
+                personal_info['last_name'] = parsed_data['surname'].strip()
+            
+            # Extract document details
+            if 'passport_number' in parsed_data:
+                personal_info['document_number'] = parsed_data['passport_number']
+            
+            if 'nationality' in parsed_data:
+                personal_info['nationality'] = self._format_nationality(parsed_data['nationality'])
+            
+            if 'country_code' in parsed_data:
+                personal_info['country_of_issue'] = self._format_nationality(parsed_data['country_code'])
+            
+            if 'sex' in parsed_data:
+                personal_info['sex'] = self._format_sex(parsed_data['sex'])
+            
+            # Format dates
+            if 'birth_date' in parsed_data:
+                personal_info['date_of_birth'] = self._format_date_for_input(parsed_data['birth_date'])
+            
+            if 'expiry_date' in parsed_data:
+                personal_info['expiry_date'] = self._format_date_for_input(parsed_data['expiry_date'])
+            
+            # Calculate extraction confidence
+            filled_fields = sum(1 for value in personal_info.values() if value and value != '')
+            total_fields = len(personal_info) - 1  # Exclude confidence field itself
+            personal_info['extraction_confidence'] = filled_fields / total_fields if total_fields > 0 else 0.0
+            
+            return personal_info
+            
+        except Exception as e:
+            logging.error(f"Personal information extraction error: {str(e)}")
+            return {
+                'first_name': '', 'last_name': '', 'date_of_birth': '', 'document_number': '',
+                'nationality': '', 'country_of_issue': '', 'sex': '', 'expiry_date': '',
+                'extraction_confidence': 0.0, 'extraction_error': str(e)
+            }
+    
+    def _format_nationality(self, country_code):
+        """Convert country code to readable nationality"""
+        country_mapping = {
+            'USA': 'United States', 'GBR': 'United Kingdom', 'CAN': 'Canada',
+            'AUS': 'Australia', 'DEU': 'Germany', 'FRA': 'France', 'JPN': 'Japan',
+            'CHN': 'China', 'IND': 'India', 'BRA': 'Brazil', 'SGP': 'Singapore',
+            'MYS': 'Malaysia', 'THA': 'Thailand', 'IDN': 'Indonesia', 'PHL': 'Philippines',
+            'VNM': 'Vietnam', 'KOR': 'South Korea', 'HKG': 'Hong Kong', 'TWN': 'Taiwan'
+        }
+        return country_mapping.get(country_code.upper(), country_code)
+    
+    def _format_sex(self, sex_code):
+        """Format sex code to readable form"""
+        sex_mapping = {
+            'M': 'Male',
+            'F': 'Female',
+            'X': 'Other'
+        }
+        return sex_mapping.get(sex_code.upper(), sex_code)
+    
+    def _format_date_for_input(self, date_str):
+        """Convert YYMMDD to YYYY-MM-DD format for HTML date input"""
+        try:
+            if not date_str or len(date_str) != 6:
+                return ''
+            
+            yy = int(date_str[:2])
+            mm = date_str[2:4]
+            dd = date_str[4:6]
+            
+            # Convert YY to YYYY (assume dates after 50 are 19xx, otherwise 20xx)
+            if yy > 50:
+                yyyy = 1900 + yy
             else:
-                gray = img_array
+                yyyy = 2000 + yy
             
-            # Mobile-specific enhancements
-            # Correct perspective distortion common in mobile photos
-            gray = self._correct_perspective(gray)
+            return f"{yyyy}-{mm}-{dd}"
             
-            # Enhance contrast for varying lighting
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            enhanced = clahe.apply(gray)
-            
-            # Reduce motion blur common in mobile captures
-            kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-            sharpened = cv2.filter2D(enhanced, -1, kernel)
-            
-            # Adaptive thresholding for mobile lighting conditions
-            binary = cv2.adaptiveThreshold(
-                sharpened, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                cv2.THRESH_BINARY, 11, 2
-            )
-            
-            return binary
-            
-        except Exception as e:
-            raise Exception(f"Mobile passport preprocessing failed: {str(e)}")
+        except Exception:
+            return date_str
     
-    def _correct_perspective(self, image):
-        """Correct perspective distortion in mobile photos"""
-        try:
-            # Simple perspective correction - can be enhanced with more sophisticated methods
-            height, width = image.shape
-            
-            # Find edges
-            edges = cv2.Canny(image, 50, 150, apertureSize=3)
-            
-            # Find lines
-            lines = cv2.HoughLines(edges, 1, np.pi/180, threshold=100)
-            
-            if lines is not None and len(lines) > 0:
-                # Simple rotation correction based on dominant line angle
-                angles = []
-                for line in lines:
-                    rho, theta = line[0]
-                    angle = theta * 180 / np.pi
-                    if 85 < angle < 95:  # Near horizontal lines
-                        angles.append(angle - 90)
-                
-                if angles:
-                    avg_angle = np.mean(angles)
-                    if abs(avg_angle) > 0.5:  # Only correct if significantly tilted
-                        M = cv2.getRotationMatrix2D((width/2, height/2), avg_angle, 1)
-                        image = cv2.warpAffine(image, M, (width, height))
-            
-            return image
-            
-        except:
-            return image  # Return original if correction fails
-    
-    def _detect_mrz_mobile(self, processed_image):
-        """Detect MRZ region optimized for mobile captures"""
-        try:
-            height, width = processed_image.shape
-            
-            # MRZ is typically in bottom 30% of passport
-            mrz_region = processed_image[int(height*0.7):, :]
-            
-            # Find text regions using morphological operations
-            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (20, 1))
-            connected = cv2.morphologyEx(mrz_region, cv2.MORPH_CLOSE, kernel)
-            
-            # Find contours
-            contours, _ = cv2.findContours(connected, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            # Filter for MRZ-like regions
-            potential_regions = []
-            for contour in contours:
-                x, y, w, h = cv2.boundingRect(contour)
-                aspect_ratio = w / h
-                area = w * h
-                
-                # MRZ characteristics: wide, moderate height, significant area
-                if aspect_ratio > 10 and area > 1000:
-                    potential_regions.append((x, y + int(height*0.7), w, h))
-            
-            if potential_regions:
-                # Select the largest region
-                best_region = max(potential_regions, key=lambda r: r[2] * r[3])
-                x, y, w, h = best_region
-                extracted_region = processed_image[y:y+h, x:x+w]
-                return extracted_region, best_region
-            else:
-                # Fallback: use bottom portion
-                bottom_region = processed_image[int(height*0.8):, :]
-                bbox = (0, int(height*0.8), width, int(height*0.2))
-                return bottom_region, bbox
-                
-        except Exception as e:
-            raise Exception(f"MRZ detection failed: {str(e)}")
-    
-    def _extract_mrz_mobile(self, mrz_region):
-        """Extract MRZ text optimized for mobile OCR"""
-        try:
-            # Scale up for better OCR
-            scale_factor = 3
-            height, width = mrz_region.shape
-            scaled = cv2.resize(mrz_region, (width*scale_factor, height*scale_factor), 
-                              interpolation=cv2.INTER_CUBIC)
-            
-            # Additional preprocessing for OCR
-            # Morphological operations to clean up text
-            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 1))
-            cleaned = cv2.morphologyEx(scaled, cv2.MORPH_CLOSE, kernel)
-            
-            # Extract text
-            text = pytesseract.image_to_string(cleaned, config=self.mrz_config)
-            
-            # Clean up text
-            lines = []
-            for line in text.strip().split('\n'):
-                cleaned_line = line.replace(' ', '').upper()
-                # Valid MRZ lines are 30 or 44 characters
-                if len(cleaned_line) in [30, 44]:
-                    if all(c in '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ<' for c in cleaned_line):
-                        lines.append(cleaned_line)
-            
-            return lines
-            
-        except Exception as e:
-            raise Exception(f"MRZ text extraction failed: {str(e)}")
-    
-    def _parse_mrz_data(self, mrz_lines):
-        """Parse MRZ data into structured format"""
+    def _parse_mrz_data_enhanced(self, mrz_lines):
+        """Enhanced MRZ parsing with better personal information extraction"""
         try:
             if not mrz_lines or len(mrz_lines) < 2:
                 raise ValueError("Insufficient MRZ data")
@@ -628,97 +605,135 @@ class MobilePassportProcessor:
             if len(mrz_lines) == 2 and len(mrz_lines[0]) == 44:  # TD3 format
                 line1, line2 = mrz_lines[0], mrz_lines[1]
                 
-                # Parse line 1
+                # Parse line 1 - Enhanced name parsing
                 parsed['document_type'] = line1[0]
                 parsed['country_code'] = line1[2:5].replace('<', '')
                 
-                # Parse names
+                # Enhanced name parsing
                 names_part = line1[5:]
                 if '<<' in names_part:
-                    surname, given_names = names_part.split('<<', 1)
-                    parsed['surname'] = surname.replace('<', ' ').strip()
-                    parsed['given_names'] = given_names.replace('<', ' ').strip()
+                    # Standard format: SURNAME<<GIVEN_NAMES
+                    surname_part, given_names_part = names_part.split('<<', 1)
+                    parsed['surname'] = surname_part.replace('<', ' ').strip()
+                    parsed['given_names'] = given_names_part.replace('<', ' ').strip()
                 else:
-                    parsed['surname'] = names_part.replace('<', ' ').strip()
+                    # Handle cases without << separator
+                    # Look for single < as name separator
+                    if '<' in names_part:
+                        name_components = names_part.split('<')
+                        surname_candidates = [comp for comp in name_components if len(comp) > 2]
+                        if surname_candidates:
+                            parsed['surname'] = surname_candidates[0].strip()
+                            remaining_parts = surname_candidates[1:] if len(surname_candidates) > 1 else []
+                            parsed['given_names'] = ' '.join(remaining_parts).strip()
+                    else:
+                        # Fallback: assume entire part is surname
+                        parsed['surname'] = names_part.replace('<', ' ').strip()
+                        parsed['given_names'] = ''
+                
+                # Parse line 2 - Enhanced data extraction
+                parsed['passport_number'] = line2[0:9].replace('<', '').strip()
+                parsed['nationality'] = line2[10:13].replace('<', '').strip()
+                parsed['birth_date'] = line2[13:19].strip()
+                parsed['sex'] = line2[20].strip() if line2[20] != '<' else ''
+                parsed['expiry_date'] = line2[21:27].strip()
+                parsed['personal_number'] = line2[28:42].replace('<', '').strip()
+                
+                # Extract check digits for validation
+                parsed['check_digits'] = {
+                    'passport_number': line2[9],
+                    'birth_date': line2[19],
+                    'expiry_date': line2[27],
+                    'overall': line2[43]
+                }
+                
+                # Enhanced validation
+                validation = self._validate_parsed_data_enhanced(parsed)
+                parsed['validation'] = validation
+                
+            elif len(mrz_lines) == 3:  # TD1 format (ID cards)
+                line1, line2, line3 = mrz_lines[0], mrz_lines[1], mrz_lines[2]
+                
+                parsed['document_type'] = line1[0]
+                parsed['country_code'] = line1[2:5].replace('<', '')
+                parsed['passport_number'] = line1[5:14].replace('<', '').strip()
+                
+                parsed['birth_date'] = line2[0:6]
+                parsed['sex'] = line2[7] if line2[7] != '<' else ''
+                parsed['expiry_date'] = line2[8:14]
+                parsed['nationality'] = line2[15:18].replace('<', '')
+                
+                # Names from line 3 - Enhanced parsing
+                if '<<' in line3:
+                    surname_part, given_names_part = line3.split('<<', 1)
+                    parsed['surname'] = surname_part.replace('<', ' ').strip()
+                    parsed['given_names'] = given_names_part.replace('<', ' ').strip()
+                else:
+                    parsed['surname'] = line3.replace('<', ' ').strip()
                     parsed['given_names'] = ''
                 
-                # Parse line 2
-                parsed['passport_number'] = line2[0:9].replace('<', '')
-                parsed['nationality'] = line2[10:13].replace('<', '')
-                parsed['birth_date'] = line2[13:19]
-                parsed['sex'] = line2[20]
-                parsed['expiry_date'] = line2[21:27]
-                parsed['personal_number'] = line2[28:42].replace('<', '')
-                
-                # Validation
-                validation = self._validate_parsed_data(parsed)
+                # Validation for TD1
+                validation = self._validate_parsed_data_enhanced(parsed)
                 parsed['validation'] = validation
             
             return parsed
             
         except Exception as e:
-            raise Exception(f"MRZ parsing failed: {str(e)}")
+            raise Exception(f"Enhanced MRZ parsing failed: {str(e)}")
     
-    def _validate_parsed_data(self, data):
-        """Validate parsed MRZ data"""
-        validation = {'is_valid': True, 'errors': [], 'warnings': []}
+    def _validate_parsed_data_enhanced(self, data):
+        """Enhanced validation with personal information checks"""
+        validation = {'is_valid': True, 'errors': [], 'warnings': [], 'personal_info_quality': 'high'}
         
         try:
-            # Validate country code
+            # Basic validation
             if data.get('country_code') not in self.country_codes:
                 validation['warnings'].append(f"Unrecognized country: {data.get('country_code')}")
             
-            # Validate dates
+            # Enhanced personal information validation
+            if not data.get('surname'):
+                validation['errors'].append("Surname is missing or empty")
+                validation['personal_info_quality'] = 'low'
+            
+            if not data.get('given_names'):
+                validation['warnings'].append("Given names are missing")
+                if validation['personal_info_quality'] == 'high':
+                    validation['personal_info_quality'] = 'medium'
+            
+            # Date validation
             for date_field in ['birth_date', 'expiry_date']:
                 date_val = data.get(date_field, '')
                 if not self._validate_date(date_val):
                     validation['errors'].append(f"Invalid {date_field}: {date_val}")
             
-            # Validate required fields
-            required = ['document_type', 'country_code', 'surname', 'passport_number']
+            # Document number validation
+            if not data.get('passport_number'):
+                validation['errors'].append("Document number is missing")
+            
+            # Required fields check
+            required = ['document_type', 'country_code', 'surname']
             for field in required:
                 if not data.get(field):
-                    validation['errors'].append(f"Missing {field}")
+                    validation['errors'].append(f"Missing required field: {field}")
             
             validation['is_valid'] = len(validation['errors']) == 0
+            
+            # Set personal info quality based on completeness
+            complete_fields = sum(1 for field in ['surname', 'given_names', 'birth_date', 'passport_number', 'nationality'] 
+                                if data.get(field))
+            if complete_fields >= 4:
+                validation['personal_info_quality'] = 'high'
+            elif complete_fields >= 3:
+                validation['personal_info_quality'] = 'medium'
+            else:
+                validation['personal_info_quality'] = 'low'
             
         except Exception as e:
             validation['errors'].append(f"Validation error: {str(e)}")
             validation['is_valid'] = False
+            validation['personal_info_quality'] = 'low'
         
         return validation
-    
-    def _validate_date(self, date_str):
-        """Validate YYMMDD date format"""
-        if len(date_str) != 6 or not date_str.isdigit():
-            return False
-        
-        try:
-            month = int(date_str[2:4])
-            day = int(date_str[4:6])
-            return 1 <= month <= 12 and 1 <= day <= 31
-        except:
-            return False
-    
-    def _calculate_ocr_confidence(self, parsed_data):
-        """Calculate confidence score for OCR results"""
-        try:
-            score = 1.0
-            
-            # Penalize missing required fields
-            required_fields = ['document_type', 'country_code', 'surname', 'passport_number']
-            missing_fields = sum(1 for field in required_fields if not parsed_data.get(field))
-            score -= missing_fields * 0.2
-            
-            # Penalize validation errors
-            if 'validation' in parsed_data:
-                error_count = len(parsed_data['validation'].get('errors', []))
-                score -= error_count * 0.15
-            
-            return max(score, 0.0)
-            
-        except:
-            return 0.5
 
 # Initialize processors
 fingerprint_processor = MobileFingerprintProcessor()
