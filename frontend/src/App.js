@@ -1188,8 +1188,8 @@ function App() {
               </Card>
             )}
 
-            {/* Step 4: NFC Verification */}
-            {activeStep === 4 && (
+            {/* Step 5: NFC Verification */}
+            {activeStep === 5 && (
               <Card className="bg-white/70 backdrop-blur-sm border-white/20">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
