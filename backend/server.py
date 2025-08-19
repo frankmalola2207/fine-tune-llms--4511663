@@ -815,7 +815,173 @@ class MobilePassportProcessor:
             validation['is_valid'] = False
             validation['personal_info_quality'] = 'low'
         
-        return validation
+    def _preprocess_mobile_passport(self, img_array):
+        """Preprocess passport image for mobile OCR"""
+        try:
+            # Convert to grayscale
+            if len(img_array.shape) == 3:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = img_array
+            
+            # Mobile-specific enhancements
+            # Correct perspective distortion common in mobile photos
+            gray = self._correct_perspective(gray)
+            
+            # Enhance contrast for varying lighting
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            enhanced = clahe.apply(gray)
+            
+            # Reduce motion blur common in mobile captures
+            kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+            sharpened = cv2.filter2D(enhanced, -1, kernel)
+            
+            # Adaptive thresholding for mobile lighting conditions
+            binary = cv2.adaptiveThreshold(
+                sharpened, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY, 11, 2
+            )
+            
+            return binary
+            
+        except Exception as e:
+            raise Exception(f"Mobile passport preprocessing failed: {str(e)}")
+    
+    def _correct_perspective(self, image):
+        """Correct perspective distortion in mobile photos"""
+        try:
+            # Simple perspective correction - can be enhanced with more sophisticated methods
+            height, width = image.shape
+            
+            # Find edges
+            edges = cv2.Canny(image, 50, 150, apertureSize=3)
+            
+            # Find lines
+            lines = cv2.HoughLines(edges, 1, np.pi/180, threshold=100)
+            
+            if lines is not None and len(lines) > 0:
+                # Simple rotation correction based on dominant line angle
+                angles = []
+                for line in lines:
+                    rho, theta = line[0]
+                    angle = theta * 180 / np.pi
+                    if 85 < angle < 95:  # Near horizontal lines
+                        angles.append(angle - 90)
+                
+                if angles:
+                    avg_angle = np.mean(angles)
+                    if abs(avg_angle) > 0.5:  # Only correct if significantly tilted
+                        M = cv2.getRotationMatrix2D((width/2, height/2), avg_angle, 1)
+                        image = cv2.warpAffine(image, M, (width, height))
+            
+            return image
+            
+        except:
+            return image  # Return original if correction fails
+    
+    def _detect_mrz_mobile(self, processed_image):
+        """Detect MRZ region optimized for mobile captures"""
+        try:
+            height, width = processed_image.shape
+            
+            # MRZ is typically in bottom 30% of passport
+            mrz_region = processed_image[int(height*0.7):, :]
+            
+            # Find text regions using morphological operations
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (20, 1))
+            connected = cv2.morphologyEx(mrz_region, cv2.MORPH_CLOSE, kernel)
+            
+            # Find contours
+            contours, _ = cv2.findContours(connected, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            # Filter for MRZ-like regions
+            potential_regions = []
+            for contour in contours:
+                x, y, w, h = cv2.boundingRect(contour)
+                aspect_ratio = w / h
+                area = w * h
+                
+                # MRZ characteristics: wide, moderate height, significant area
+                if aspect_ratio > 10 and area > 1000:
+                    potential_regions.append((x, y + int(height*0.7), w, h))
+            
+            if potential_regions:
+                # Select the largest region
+                best_region = max(potential_regions, key=lambda r: r[2] * r[3])
+                x, y, w, h = best_region
+                extracted_region = processed_image[y:y+h, x:x+w]
+                return extracted_region, best_region
+            else:
+                # Fallback: use bottom portion
+                bottom_region = processed_image[int(height*0.8):, :]
+                bbox = (0, int(height*0.8), width, int(height*0.2))
+                return bottom_region, bbox
+                
+        except Exception as e:
+            raise Exception(f"MRZ detection failed: {str(e)}")
+    
+    def _extract_mrz_mobile(self, mrz_region):
+        """Extract MRZ text optimized for mobile OCR"""
+        try:
+            # Scale up for better OCR
+            scale_factor = 3
+            height, width = mrz_region.shape
+            scaled = cv2.resize(mrz_region, (width*scale_factor, height*scale_factor), 
+                              interpolation=cv2.INTER_CUBIC)
+            
+            # Additional preprocessing for OCR
+            # Morphological operations to clean up text
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 1))
+            cleaned = cv2.morphologyEx(scaled, cv2.MORPH_CLOSE, kernel)
+            
+            # Extract text
+            text = pytesseract.image_to_string(cleaned, config=self.mrz_config)
+            
+            # Clean up text
+            lines = []
+            for line in text.strip().split('\n'):
+                cleaned_line = line.replace(' ', '').upper()
+                # Valid MRZ lines are 30 or 44 characters
+                if len(cleaned_line) in [30, 44]:
+                    if all(c in '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ<' for c in cleaned_line):
+                        lines.append(cleaned_line)
+            
+            return lines
+            
+        except Exception as e:
+            raise Exception(f"MRZ text extraction failed: {str(e)}")
+    
+    def _validate_date(self, date_str):
+        """Validate YYMMDD date format"""
+        if len(date_str) != 6 or not date_str.isdigit():
+            return False
+        
+        try:
+            month = int(date_str[2:4])
+            day = int(date_str[4:6])
+            return 1 <= month <= 12 and 1 <= day <= 31
+        except:
+            return False
+    
+    def _calculate_ocr_confidence(self, parsed_data):
+        """Calculate confidence score for OCR results"""
+        try:
+            score = 1.0
+            
+            # Penalize missing required fields
+            required_fields = ['document_type', 'country_code', 'surname', 'passport_number']
+            missing_fields = sum(1 for field in required_fields if not parsed_data.get(field))
+            score -= missing_fields * 0.2
+            
+            # Penalize validation errors
+            if 'validation' in parsed_data:
+                error_count = len(parsed_data['validation'].get('errors', []))
+                score -= error_count * 0.15
+            
+            return max(score, 0.0)
+            
+        except:
+            return 0.5
 
 # Initialize processors
 fingerprint_processor = MobileFingerprintProcessor()
