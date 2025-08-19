@@ -31,16 +31,33 @@ const IDScanScreen = () => {
       setCameraError(null);
       console.log('📹 Starting camera for ID document scan...');
 
-      // Enhanced camera configuration for document scanning
-      const constraints = {
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API not supported on this device');
+      }
+
+      // Mobile-optimized camera configuration
+      let constraints = {
         video: {
-          width: { ideal: 1920, min: 1280 },
-          height: { ideal: 1080, min: 720 },
-          facingMode: { ideal: 'environment', exact: false }, // Prefer back camera
+          facingMode: { ideal: 'environment' }, // Prefer back camera
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 }
         }
       };
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('📱 Requesting camera access with constraints:', constraints);
+      
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (error) {
+        // Fallback to basic constraints if the ideal ones fail
+        console.warn('⚠️ Ideal constraints failed, trying basic constraints');
+        constraints = {
+          video: true
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      }
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
