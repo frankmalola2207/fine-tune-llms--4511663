@@ -77,9 +77,21 @@ const IDScanScreen = () => {
       }
       
       if (videoRef.current) {
-        console.log('📹 Assigning stream to video element...');
+        console.log('📹 Setting camera active first to ensure video element is rendered...');
+        
+        // Set camera active FIRST to ensure video element is rendered
+        setCameraActive(true);
+        
+        // Wait for React to render the video element
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         const video = videoRef.current;
+        
+        if (!video) {
+          throw new Error('Video element not available after state update');
+        }
+        
+        console.log('📹 Assigning stream to video element...');
         
         // Ensure video element is ready
         video.srcObject = stream;
@@ -91,9 +103,6 @@ const IDScanScreen = () => {
           videoHeight: video.videoHeight,
           readyState: video.readyState
         });
-        
-        // Set camera active immediately to show video element
-        setCameraActive(true);
         
         // Force video to load and play
         try {
